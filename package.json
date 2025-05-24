@@ -1,0 +1,29 @@
+{
+  "name": "annoy_friend",
+  "version": "1.0.0",
+  "description": "a website that allows users to automatically text their friends",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node src/test.js",
+    "start": "nodemon src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nathantsai1/annoy_friend.git#main"
+  },
+  "keywords": [
+    "google",
+    "mail",
+    "website"
+  ],
+  "author": "Nathan Tsai",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nathantsai1/annoy_friend/issues"
+  },
+  "homepage": "https://github.com/nathantsai1/annoy_friend/tree/main#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10"
+  }
+}
