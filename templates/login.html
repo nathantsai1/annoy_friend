@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Annoy-Friend | Home</title>
+    <title>Annoy-Friend | Login</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <header>
         <h1>Annoy-Friend</h1>
-        <p>Automate emails to playfully annoy your friends!</p>
+        <p>Automate emails to (not so)  playfully annoy your friends!</p>
     </header>
     <nav>
+        <a href="/">Home</a>
         <a href="/signup">Sign Up</a>
         <a href="/login">Login</a>
         <a href="/my-emails">My Emails</a>
@@ -20,7 +21,9 @@
     <main>
         <h2>Login</h2>
         <p>
-           <button href="" class="gsi-material-button">
+            <script src="https://accounts.google.com/gsi/client" async></script>
+
+           <a href="{{oauth}}"><button class="gsi-material-button">
             <div class="gsi-material-button-state"></div>
             <div class="gsi-material-button-content-wrapper">
                 <div class="gsi-material-button-icon">
@@ -35,7 +38,7 @@
                 <span class="gsi-material-button-contents">Continue with Google</span>
                 <span style="display: none;">Continue with Google</span>
             </div>
-        </button>
+        </button></a>
         </p>
         <div class="cta">
             <a href="/about">Learn More</a>
