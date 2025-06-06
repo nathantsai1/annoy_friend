@@ -1,1 +1,77 @@
-todo - about 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annoy-Friend | About</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <a href="/"><h1>Annoy-Friend</h1></a>
+        <p>Automate emails to (not so) playfully annoy your friends!</p>
+    </header>    <nav>
+        <a href="/about">About</a>
+        {{login}}
+    </nav>
+    <main>
+        <h2>About Annoy-Friend</h2>
+        
+        <section class="privacy-section">
+            <h3>What is Annoy-Friend?</h3>
+            <p>Annoy-Friend is the ultimate platform for sending automated, playful emails to your friends. Because sometimes, a little friendly annoyance is exactly what your friendships need!</p>
+        </section>
+
+        <section class="privacy-section">
+            <h3>Features</h3>
+            <h4>Automated Email Campaigns</h4>
+            <p>Create up to 10 different email templates that automatically send to your friends at scheduled intervals. Set it and forget it!</p>
+            
+            <h4>Secure Gmail Integration</h4>
+            <p>Built with Google's official Gmail API and OAuth2 authentication. Your emails are sent securely from your own Gmail account.</p>
+            
+            <h4>Easy Setup</h4>
+            <p>Simple signup process with Google authentication. Get started in minutes, not hours. No complicated configuration required.</p>
+        </section>
+
+        <section class="privacy-section">
+            <h3>How It Works</h3>
+            <p>Getting started with Annoy-Friend is simple:</p>
+            <ol>
+                <li><strong>Sign Up with Google:</strong> Create your account using secure Google OAuth2 authentication. We'll never store your password.</li>
+                <li><strong>Create Email Templates:</strong> Design up to 10 different email templates with custom messages, subjects, and scheduling options.</li>
+                <li><strong>Add Your Friends:</strong> Enter your friends' email addresses and assign them to different email campaigns. Don't worry, it's all in good fun!</li>
+                <li><strong>Watch the Magic Happen:</strong> Sit back and relax as your automated emails bring smiles (and maybe eye-rolls) to your friends' inboxes.</li>
+            </ol>
+        </section>
+
+        <section class="privacy-section">
+            <h3>Technology Stack</h3>
+            <p>Annoy-Friend is built using modern, secure technologies:</p>
+            <ul>
+                <li><strong>Backend:</strong> Node.js & Express.js</li>
+                <li><strong>Email Service:</strong> Gmail API with OAuth2</li>
+                <li><strong>Database:</strong> MongoDB for user data & templates</li>
+                <li><strong>Authentication:</strong> Google OAuth2</li>
+                <li><strong>Frontend:</strong> Responsive HTML5 & CSS3</li>
+                <li><strong>Security:</strong> Industry-standard encryption</li>
+            </ul>
+        </section>
+
+        <section class="privacy-section">
+            <h3>Important Note</h3>
+            <p>Annoy-Friend is designed for <strong>harmless fun between friends</strong>. Please use this platform responsibly and only send emails to people who know you and will appreciate the humor. We do not condone spam, harassment, or any malicious use of our service. Always respect others' privacy and email preferences.</p>
+        </section>
+
+        <section class="privacy-section">
+            <h3>Get Started</h3>
+            <p>Ready to start playfully annoying your friends? Sign up today or log in to your existing account:</p>
+            <ul>
+                <li><a href="/signup">Create New Account</a></li>
+                <li><a href="/login">Sign In to Existing Account</a></li>
+            </ul>
+        </section>
+    </main>
+    {{footer}}
+</body>
+</html>

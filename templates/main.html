@@ -7,39 +7,102 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <div id="success-banner" class="success-banner">
+        <span id="banner-message">Login successful! Welcome back.</span>
+        <button class="close-btn" onclick="closeBanner()">&times;</button>
+    </div>
+
     <header>
-        <h1>Annoy-Friend</h1>
+        <a href="/"><h1>Annoy-Friend</h1></a>
         <p>Automate emails to playfully annoy your friends!</p>
     </header>
     <nav>
-        {{no_login}}
-        <a href="/signup">Sign Up</a>
-        <a href="/login">Login</a>
-        {{yes_login}}
-        <a href="/my-emails">My Emails</a>
         <a href="/about">About</a>
+        {{login}}
     </nav>
     <main>
         <h2>What is this?</h2>
         <p>
-            Annoy-Friend is a Node.js-powered web app that lets you send automated, playful emails to your friends. 
-            Simply sign up, log in, and create up to 10 different emails that will be sent automatically to your chosen recipient.
-        </p>
-        <h2>How does it work?</h2>
+            Annoy-Friend is a Node.js-powered web app that lets you send playful emails to your friends. 
+            Simply sign up, log in, and create unlimited emails that will be sent to your chosen recipient.
+        </p>        <h2>How does it work?</h2>
         <ol>
             <li><strong>Sign up</strong> for an account.</li>
             <li><strong>Log in</strong> to your dashboard.</li>
             <li><strong>Add your email</strong> so the app can send emails on your behalf.</li>
-            <li><strong>Create up to 10 automated emails</strong> for your friend.</li>
+            <li><strong>Send up to 10 emails daily</strong> using AI-assisted writing or manual composition.</li>
             <li>Let the app do the rest!</li>
         </ol>
         <div class="cta">
             <a href="/signup">Get Started</a>
             <a href="/about">Learn More</a>
         </div>
-    </main>
-    <footer>
-        &copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.
-    </footer>
+    </main>    <script>
+        // Check for success message in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('login') === 'true') {
+            showBanner('Login successful! Welcome back.');
+        } else if (urlParams.get('signup') === 'true') {
+            showBanner('Signup successful! Welcome to Annoy-Friend!');
+        } else if (urlParams.get('logout') === 'true') {
+            showBanner('Logout successful! Please use Annoy-Friend again!');
+        }
+
+        function createConfetti() {
+            const confettiContainer = document.createElement('div');
+            confettiContainer.className = 'confetti';
+            document.body.appendChild(confettiContainer);
+
+            // Create 50 confetti pieces
+            for (let i = 0; i < 1000; i++) {
+                const confettiPiece = document.createElement('div');
+                confettiPiece.className = 'confetti-piece';
+                
+                // Random horizontal position
+                confettiPiece.style.left = Math.random() * 100 + '%';
+                
+                // Random delay for staggered effect
+                confettiPiece.style.animationDelay = Math.random() * 2 + 's';
+                
+                confettiContainer.appendChild(confettiPiece);
+            }
+
+            // Remove confetti after animation completes
+            setTimeout(() => {
+                if (confettiContainer.parentNode) {
+                    confettiContainer.parentNode.removeChild(confettiContainer);
+                }
+            }, 6000);
+        }
+
+        function showBanner(message) {
+            const banner = document.getElementById('success-banner');
+            const messageEl = document.getElementById('banner-message');
+            messageEl.textContent = message;
+            banner.classList.add('show');
+            document.body.classList.add('banner-shown');
+            
+            // Trigger confetti animation
+            createConfetti();
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closeBanner();
+            }, 5000);
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('success-banner');
+            banner.classList.remove('show');
+            document.body.classList.remove('banner-shown');
+            
+            // Remove success parameter from URL
+            const url = new URL(window.location);
+            ['login', 'signup', 'logout'].forEach(param => url.searchParams.delete(param));
+            window.history.replaceState({}, document.title, url);
+            location.reload();
+        }
+    </script>
+    {{footer}}
 </body>
 </html>

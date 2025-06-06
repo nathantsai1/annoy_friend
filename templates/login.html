@@ -7,16 +7,19 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <!-- Success Banner -->
+    <div id="success-banner" class="success-banner">
+        <span id="banner-message">Login successful! Welcome back.</span>
+        <button class="close-btn" onclick="closeBanner()">&times;</button>
+    </div>
+
     <header>
-        <h1>Annoy-Friend</h1>
-        <p>Automate emails to (not so)  playfully annoy your friends!</p>
+        <a href="/"><h1>Annoy-Friend</h1></a>
+        <p>Automate emails to (not so) playfully annoy your friends!</p>
     </header>
     <nav>
-        <a href="/">Home</a>
-        <a href="/signup">Sign Up</a>
-        <a href="/login">Login</a>
-        <a href="/my-emails">My Emails</a>
         <a href="/about">About</a>
+        {{login}}
     </nav>
     <main>
         <h2>Login</h2>
@@ -44,8 +47,38 @@
             <a href="/about">Learn More</a>
         </div>
     </main>
-    <footer>
-        &copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.
-    </footer>
+    {{footer}}
+
+    <script>
+        // Check for success message in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            showBanner('Login successful! Welcome back.');
+        }
+
+        function showBanner(message) {
+            const banner = document.getElementById('success-banner');
+            const messageEl = document.getElementById('banner-message');
+            messageEl.textContent = message;
+            banner.classList.add('show');
+            document.body.classList.add('banner-shown');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closeBanner();
+            }, 5000);
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('success-banner');
+            banner.classList.remove('show');
+            document.body.classList.remove('banner-shown');
+            
+            // Remove success parameter from URL
+            const url = new URL(window.location);
+            url.searchParams.delete('success');
+            window.history.replaceState({}, document.title, url);
+        }
+    </script>
 </body>
 </html>

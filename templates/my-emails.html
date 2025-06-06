@@ -1,44 +1,49 @@
-todo - emails
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Annoy-Friend | Home</title>
+    <title>Annoy-Friend | Emails</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <header>
-        <h1>Annoy-Friend</h1>
+        <a href="/"><h1>Annoy-Friend</h1></a>
         <p>Automate emails to playfully annoy your friends!</p>
     </header>
     <nav>
-        <a href="/signup">Sign Up</a>
-        <a href="/login">Login</a>
-        <a href="/my-emails">My Emails</a>
         <a href="/about">About</a>
+        {{login}}
     </nav>
     <main>
-        <h2>What is this?</h2>
+        <h2>Hi, {{name}}! Welcome to My-Emails!</h2>
         <p>
-            Annoy-Friend is a Node.js-powered web app that lets you send automated, playful emails to your friends. 
-            Simply sign up, log in, and create up to 10 different emails that will be sent automatically to your chosen recipient.
-        </p>
-        <h2>How does it work?</h2>
+            You can help<strike>annoy</strike> your friends here!
+        </p>        <h2>How does it work?</h2>
         <ol>
-            <li><strong>Sign up</strong> for an account.</li>
-            <li><strong>Log in</strong> to your dashboard.</li>
             <li><strong>Add your email</strong> so the app can send emails on your behalf.</li>
-            <li><strong>Create up to 10 automated emails</strong> for your friend.</li>
+            <li><strong>Send up to 10 emails daily</strong> using AI-assisted writing or manual composition.</li>
             <li>Let the app do the rest!</li>
         </ol>
+        Start here:
+        <form action="/send_email" method="get">
+            <label for="fname">Send to: </label>
+            <input type="text" id="fname" name="email" required><br><br>
+            <label for="fname">cc: </label>
+            <input type="text" id="fname" name="cc"><br><br>
+            <label for="fname">bcc: </label>
+            <input type="text" id="fname" name="bcc"><br><br>
+            <label for="lname">Last name: </label>
+            <input type="text" id="lname" name="recipient" required><br><br>
+            <label for="subject">Text: </label>
+            <textarea id="content" name="content" rows="5" cols="33"></textarea><br><br>
+            <input type="submit" value="Submit">
+        </form>
+        
         <div class="cta">
-            <a href="/signup">Get Started</a>
             <a href="/about">Learn More</a>
         </div>
     </main>
-    <footer>
-        &copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.
-    </footer>
+    {{footer}}
 </body>
 </html>

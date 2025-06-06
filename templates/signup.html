@@ -8,22 +8,20 @@
 </head>
 <body>
     <header>
-        <h1>Annoy-Friend</h1>
-        <p>Automate emails to (not so)  playfully annoy your friends!</p>
+        <a href="/"><h1>Annoy-Friend</h1></a>
+        <p>Automate emails to (not so) playfully annoy your friends!</p>
     </header>
     <nav>
-        <a href="/">Home</a>
-        <a href="/signup">Sign Up</a>
-        <a href="/login">Login</a>
-        <a href="/my-emails">My Emails</a>
         <a href="/about">About</a>
+        {{login}}
+
     </nav>
     <main>
-        <h2>Login</h2>
+        <h2>Signup</h2>
         <p>
             <script src="https://accounts.google.com/gsi/client" async></script>
 
-           <button href="" class="gsi-material-button">
+           <a href="{{oauth}}"><button class="gsi-material-button">
             <div class="gsi-material-button-state"></div>
             <div class="gsi-material-button-content-wrapper">
                 <div class="gsi-material-button-icon">
@@ -38,14 +36,13 @@
                 <span class="gsi-material-button-contents">Continue with Google</span>
                 <span style="display: none;">Continue with Google</span>
             </div>
-        </button>
+          </button></a>
         </p>
+        <div class="cta">More coming soon! This is just a placeholder for now.</div>
         <div class="cta">
             <a href="/about">Learn More</a>
         </div>
     </main>
-    <footer>
-        &copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.
-    </footer>
+    {{footer}}
 </body>
 </html>
