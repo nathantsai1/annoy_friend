@@ -27,7 +27,7 @@ const templates = path.join(__dirname + "/../templates");
 app.use('/static', express.static(path.join(__dirname, '../static')));
 app.use('/templates', express.static(path.join(__dirname, '/../templates')));
 
-const main_page = 'http://localhost:3000/';
+const main_page = 'https://annoy-friend.onrender.com/';
 
 // allow req.body
 app.use(express.json());
