@@ -215,52 +215,6 @@ app.get("/505", async (req, res) => {
     changeLogin(result, req, res);
 });
 
-// testing:
-app.get('/test' , async (req, res) => {
-    try {
-        res.json(req.query)
-        // const result = await readFile(path.join(templates, 'privacy.txt'));
-        // console.log(await writeFile(path.join(templates, 'privacy.txt'), result));
-        // res.send(1);
-        // return true;
-        
-        // res.sendFile(path.join(templates, 'new_privacy_clean.html'));
-        // let result = await readFile(path.join(templates, '../json/goauth.json'));
-        // result = JSON.parse(result);
-        // store_cookie('oauth', result.access_token, result.expiry_date, req, res);
-        // res.json(result)
-        // return true;
-    } catch (error) {
-        console.error('Error in /test route:', error);
-        res.status(500).send('Server Error');
-        return false;
-    }
-});
-
-// New route to test database functions
-app.get('/users', async (req, res) => {
-    try {
-        const users = await getUsers();
-        if (users) {
-            res.json(users);
-        } else {
-            res.status(500).send('Failed to fetch users');
-        }
-    } catch (error) {
-        console.error('Error in /users route:', error);
-        res.status(500).send('Server Error');
-    }
-});
-
-app.get('/cookies', async (req, res) => {
-    // Check if the cookie is set
-    if (req.cookies && Object.keys(req.cookies).length > 0) {
-        res.json(req.cookies);
-    } else {
-        res.send("no cookies found")
-        console.log('No cookies found');    }
-    return true;
-});
 
 // don't touch
 app.get('/:error_page', async (req, res) => {
