@@ -7,7 +7,7 @@ const fs = require('fs/promises');
 const gmail = google.gmail('v1');
 
 const KEYFILE = path.join(__dirname, '../../json/oauth2.keys.json');
-const SCOPES = ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.compose', 'https://www.googleapis.com/auth/userinfo.profile'];
+const SCOPES = ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'];
 
 let oAuth2Client = null;
 async function send_oauth2(i) {
@@ -44,14 +44,47 @@ async function exchangeCodeForToken(code) {
 }
 async function send_email(req) {
   try {
-    if (!oauth) {
+    if (!req.cookies.oauth) {
       console.error('OAuth token is required to send email');
       return false;
     }
+    console.log(req.cookies.oauth)
     console.log(1)
+
+    if (!oAuth2Client) {
+      const keys = JSON.parse(await fs.readFile(KEYFILE, 'utf8')).web;
+      oAuth2Client = new google.auth.OAuth2(
+        keys.client_id,
+        keys.client_secret,
+        keys.redirect_uris[0] // Use first redirect URI or pass index as parameter
+      );
+    }
     // !req.query.email || !req.query.cc || !req.query.bcc || !req.query.recipient || !req.query.content
     oAuth2Client.setCredentials({access_token: req.cookies.oauth});
-    const raw = Buffer.from(`To: ${req.query.email}\nCc: ${req.query.cc}\nBcc: ${req.query.bcc}\nSubject: Annoy Friend\n\n${req.query.content}`).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        google.options({auth: oAuth2Client});
+
+          oAuth2Client.setCredentials({access_token: req.cookies.oauth});
+    google.options({auth: oAuth2Client});
+
+    const emailLines = [
+     `From: ${req.cookies.name} <${req.cookies.email}>`,
+     `To: ${req.query.email}`,
+      req.query.cc ? `Cc: ${req.query.cc}` : null,
+     req.query.bcc ? `Bcc: ${req.query.bcc}` : null,
+     `Content-Type: text/html; charset=UTF-8`,
+     `MIME-Version: 1.0`,
+     `Subject: ${req.query.subject}`,
+     ``, // This blank line is REQUIRED to separate headers from body
+     `${req.query.content}`
+   ].filter(line => line !== null); // Filter out null values, but keep empty strings
+    
+    const raw = Buffer.from(emailLines.join('\r\n')).toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    
+    console.log('Prepared email:', emailLines.join('\r\n'));
+    console.log('Content value:', req.query.content); // Debug log
     const res = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {

@@ -15,6 +15,7 @@ const { exchangeCodeForToken, send_oauth2, send_email } = require('./common/send
 const { readFile, changeLogin, writeFile } = require('./common/readfile');
 const { store_cookie } = require('./common/cookie');
 const { is_loggedin } = require('./common/is_loggedin');
+const { getUsers, getUserById, getUserByEmail, createUser, updateUser } = require('./common/neon');
 const { send } = require('process');
 
 // express
@@ -100,8 +101,9 @@ app.get('/login', async (req, res) => {
 });
 
 app.get('/my-emails', async (req, res) => {
+    if (await is_loggedin(false, req, res, {url: main_page + "signup"})) return true;
     const result = await readFile(path.join(templates, 'my-emails.html'));
-    changeLogin(result, req, res);
+    changeLogin(result, req, res, {name: req.cookies.name});
 });
 
 app.get('/tos', async (req, res) => {
@@ -136,9 +138,20 @@ app.get("/oauth2callback/login", async (req, res) => {
         }
         const result = await exchangeCodeForToken(code);
         console.log(`Received OAuth2 auth:`, result);
+        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${result.access_token}`,
+                'Accept': 'application/json'
+            }
+        });
+        const userInfo = await response.json();
         let cookie = {
             oauth: result.access_token,
             scopes: result.scope,
+            id: userInfo.id,
+            name: userInfo.name,
+            email: userInfo.email
         }
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?login=true'); // Redirect with query parameter
@@ -158,7 +171,11 @@ app.get("/oauth2callback/signup", async (req, res) => {
             return false;
         }        
         const result = await exchangeCodeForToken(code);
-        console.log(`Received OAuth2 auth:`, result);
+        console.log(`Received OAuth2 auth signup:`, result);
+        if (result === false) {
+            res.status(500).sendFile(templates + '505.html');
+            return false;
+        }
         const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
             method: 'GET',
             headers: {
@@ -171,7 +188,8 @@ app.get("/oauth2callback/signup", async (req, res) => {
             oauth: result.access_token,
             scopes: result.scope,
             id: userInfo.id,
-            name: userInfo.name
+            name: userInfo.name,
+            email: userInfo.email
         }
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?signup=true'); // Redirect with query parameter
@@ -184,12 +202,12 @@ app.get("/oauth2callback/signup", async (req, res) => {
 });
 
 app.get("/send_email", async (req, res) => {
-    if (!req.query || !req.query.email || !req.query.cc || !req.query.bcc || !req.query.recipient || !req.query.content) {
+    if (!req.query || !req.query.email || !req.query.recipient || !req.query.subject || !req.query.content || !req.query.ai) {
         res.status(400).send('Bad Request: Missing required query parameters');
         return false;
     }
     
-    (send_email(req)) ? res.send('Email sent successfully') : res.status(500).send('Failed to send email');
+    (send_email(req)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
     return true;
 });
 app.get("/505", async (req, res) => {
@@ -200,26 +218,7 @@ app.get("/505", async (req, res) => {
 // testing:
 app.get('/test' , async (req, res) => {
     try {
-        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${req.cookies.oauth}`,
-                'Accept': 'application/json'
-            }
-        });       
-        const userInfo = await response.json();
-        console.log(userInfo);
-        try {
-        store_cookie({
-            id: userInfo.id,
-            name: userInfo.name
-        }, 60*60*1000, req, res);
-        res.redirect("/")
-        return true;
-    } catch (error) {
-        console.error('Error storing cookie:', error);
-        return false;
-    }
+        res.json(req.query)
         // const result = await readFile(path.join(templates, 'privacy.txt'));
         // console.log(await writeFile(path.join(templates, 'privacy.txt'), result));
         // res.send(1);
@@ -235,6 +234,21 @@ app.get('/test' , async (req, res) => {
         console.error('Error in /test route:', error);
         res.status(500).send('Server Error');
         return false;
+    }
+});
+
+// New route to test database functions
+app.get('/users', async (req, res) => {
+    try {
+        const users = await getUsers();
+        if (users) {
+            res.json(users);
+        } else {
+            res.status(500).send('Failed to fetch users');
+        }
+    } catch (error) {
+        console.error('Error in /users route:', error);
+        res.status(500).send('Server Error');
     }
 });
 

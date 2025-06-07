@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <div id="success-banner" class="success-banner">
+        <span id="banner-message">Login successful! Welcome back.</span>
+        <button class="close-btn" onclick="closeBanner()">&times;</button>
+    </div>
     <header>
         <a href="/"><h1>Annoy-Friend</h1></a>
         <p>Automate emails to playfully annoy your friends!</p>
@@ -22,28 +26,189 @@
         </p>        <h2>How does it work?</h2>
         <ol>
             <li><strong>Add your email</strong> so the app can send emails on your behalf.</li>
-            <li><strong>Send up to 10 emails daily</strong> using AI-assisted writing or manual composition.</li>
+            <li><strong>Send up to 10 emails daily</strong> using AI-assisted writing* or manual composition.</li>
             <li>Let the app do the rest!</li>
         </ol>
+        *Note that AI assisted writing is not yet available to the public, but you can still use manual composition.
         Start here:
-        <form action="/send_email" method="get">
-            <label for="fname">Send to: </label>
-            <input type="text" id="fname" name="email" required><br><br>
-            <label for="fname">cc: </label>
-            <input type="text" id="fname" name="cc"><br><br>
-            <label for="fname">bcc: </label>
-            <input type="text" id="fname" name="bcc"><br><br>
-            <label for="lname">Last name: </label>
-            <input type="text" id="lname" name="recipient" required><br><br>
-            <label for="subject">Text: </label>
-            <textarea id="content" name="content" rows="5" cols="33"></textarea><br><br>
-            <input type="submit" value="Submit">
-        </form>
-        
+        <div id="input">
+            <button onclick="chooseAutomated(true)">Use AI</button>
+            <button onclick="chooseAutomated(false)">Manual</button>
+        </div>
         <div class="cta">
             <a href="/about">Learn More</a>
         </div>
     </main>
     {{footer}}
+    <script>        
+        async function chooseAutomated(isAutomated) {
+            // if user wants to use AI or not
+            if (isAutomated) {
+                const replacement = `<div class="email-composer">
+                    <div class="email-header">
+                        <h3>✨ Compose with AI</h3>
+                        <p>Let AI help you craft the perfect message</p>
+                    </div>
+                    <form action="/send_email?ai=true" method="get" class="email-form">
+                        <div class="email-field-group">
+                            <div class="email-field">
+                                <label class="email-label">To:</label>
+                                <input type="email" name="email" class="email-input" placeholder="friend@example.com" required>
+                            </div>
+                            <div class="email-field optional">
+                                <label class="email-label">Cc:</label>
+                                <input type="email" name="cc" class="email-input" placeholder="Optional">
+                            </div>
+                            <div class="email-field optional">
+                                <label class="email-label">Bcc:</label>
+                                <input type="email" name="bcc" class="email-input" placeholder="Optional">
+                            </div>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Recipient Name:</label>
+                            <input type="text" name="recipient" class="email-input" placeholder="Your friend's name" required>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Subject:</label>
+                            <input type="text" name="subject" class="email-input" placeholder="What's this email about?" required>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Content Prompt:</label>
+                            <textarea name="content" class="email-textarea" placeholder="Describe what you want the AI to write about... (e.g., 'Write a funny message about our weekend plans')" rows="6"></textarea>
+                        </div>
+                        <div class="email-actions">
+                            <button type="button" onclick="chooseAutomated(null)" class="btn-secondary">Back</button>
+                            <button type="submit" class="btn-primary">🚀 Send with AI</button>
+                        </div>
+                        <input name="ai" type="hidden" value="true">
+                    </form>`;
+                const basicForm = `<div id="input">
+            <button onclick="chooseAutomated(true)">Use AI</button>
+            <button onclick="chooseAutomated(false)">Manual</button>
+        </div>`
+                document.body.innerHTML = document.body.innerHTML.replace(basicForm , replacement);
+            } else if (isAutomated === false) {
+                const replacement = `<div class="email-composer">
+                    <div class="email-header">
+                        <h3>✍️ Manual Compose</h3>
+                        <p>Write your message yourself</p>
+                    </div>
+                    <form action="/send_email?ai=false" method="get" class="email-form">
+                        <div class="email-field-group">
+                            <div class="email-field">
+                                <label class="email-label">To:</label>
+                                <input type="email" name="email" class="email-input" placeholder="friend@example.com" required>
+                            </div>
+                            <div class="email-field optional">
+                                <label class="email-label">Cc:</label>
+                                <input type="email" name="cc" class="email-input" placeholder="Optional">
+                            </div>
+                            <div class="email-field optional">
+                                <label class="email-label">Bcc:</label>
+                                <input type="email" name="bcc" class="email-input" placeholder="Optional">
+                            </div>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Recipient Name:</label>
+                            <input type="text" name="recipient" class="email-input" placeholder="Your friend's name" required>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Subject:</label>
+                            <input type="text" name="subject" class="email-input" placeholder="What's this email about?" required>
+                        </div>
+                        <div class="email-field">
+                            <label class="email-label">Message:</label>
+                            <textarea name="content" class="email-textarea" placeholder="Write your message here..." rows="8"></textarea>
+                        </div>
+                        <div class="email-actions">
+                            <button type="button" onclick="chooseAutomated(null)" class="btn-secondary">Back</button>
+                            <button type="submit" class="btn-primary">📧 Send Message</button>
+                        </div>
+                        <input name="ai" type="hidden" value="false">
+                    </form>
+                </div>`;
+                const basicForm = `<div id="input">
+            <button onclick="chooseAutomated(true)">Use AI</button>
+            <button onclick="chooseAutomated(false)">Manual</button>
+        </div>`
+                document.body.innerHTML = document.body.innerHTML.replace(basicForm, replacement);
+            } else if (isAutomated === null) {
+                // Go back to the original selection
+                const replacement = `<div id="input">
+            <button onclick="chooseAutomated(true)">Use AI</button>
+            <button onclick="chooseAutomated(false)">Manual</button>
+        </div>`;
+                const emailComposer = document.querySelector('.email-composer');
+                if (emailComposer) {
+                    emailComposer.outerHTML = replacement;
+                }
+            }
+        }
+        document.body.innerHTML = document.body.innerHTML.replace('hello', 'hi');
+
+        // banner
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            showBanner('Email sent successfully! Your friend will be annoyed soon.', true);
+        } else if (urlParams.get('success') === 'false') {
+            showBanner('Email sending failed! Please try again.', false);
+        }
+
+        function createConfetti() {
+            const confettiContainer = document.createElement('div');
+            confettiContainer.className = 'confetti';
+            document.body.appendChild(confettiContainer);
+
+            // Create 50 confetti pieces
+            for (let i = 0; i < 1000; i++) {
+                const confettiPiece = document.createElement('div');
+                confettiPiece.className = 'confetti-piece';
+                
+                // Random horizontal position
+                confettiPiece.style.left = Math.random() * 100 + '%';
+                
+                // Random delay for staggered effect
+                confettiPiece.style.animationDelay = Math.random() * 2 + 's';
+                
+                confettiContainer.appendChild(confettiPiece);
+            }
+
+            // Remove confetti after animation completes
+            setTimeout(() => {
+                if (confettiContainer.parentNode) {
+                    confettiContainer.parentNode.removeChild(confettiContainer);
+                }
+            }, 6000);
+        }
+
+        function showBanner(message, is_true) {
+            const banner = document.getElementById('success-banner');
+            const messageEl = document.getElementById('banner-message');
+            messageEl.textContent = message;
+            banner.classList.add('show');
+            if (!is_true) banner.style.backgroundColor = '#ff0033';
+            document.body.classList.add('banner-shown');
+            
+            // Trigger confetti animation
+            if (is_true) createConfetti();
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closeBanner();
+            }, 5000);
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('success-banner');
+            banner.classList.remove('show');
+            document.body.classList.remove('banner-shown');
+            
+            // Remove success parameter from URL
+            const url = new URL(window.location);
+            ['success'].forEach(param => url.searchParams.delete(param));
+            window.history.replaceState({}, document.title, url);
+            location.reload();
+        }
+    </script>
 </body>
 </html>
