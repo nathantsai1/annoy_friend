@@ -6,7 +6,7 @@ const fs = require('fs/promises');
 
 const gmail = google.gmail('v1');
 
-const KEYFILE = path.join(__dirname, '../../json/oauth2.keys.json');
+const KEYFILE = path.join(__dirname, '../../oauth2.keys.json');
 const SCOPES = ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'];
 
 let oAuth2Client = null;
