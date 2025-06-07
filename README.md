@@ -5,7 +5,7 @@ This is a project that uses node.js to help users annoy their friend by sending 
 ## How does this work?
 There will be a website where you can sign up /login and then create an email log. You will get a max of 10 different emails that would automatically be sent. 
 ## How to set up
-Sign up [here](https://annoy-friend.onrender.com/)! Then go to the "my emails" tab and go add a new one
+Sign up [here](https://annoy-friend.onrender.com)! Then go to the "my emails" tab and go add a new one
 ## APIs used
 GMAIL API
 

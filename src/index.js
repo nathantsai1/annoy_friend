@@ -23,7 +23,7 @@ const app = express();
 const PORT = 3000;
 
 // what do these paths mean?
-const templates = path.join(__dirname + "/../templates");
+const templates = path.join(__dirname + "/../templates/");
 app.use('/static', express.static(path.join(__dirname, '../static')));
 app.use('/templates', express.static(path.join(__dirname, '/../templates')));
 
