@@ -2,7 +2,7 @@
 
 // links: /favicon.ico, /, /about, /signup, /login, 
 // /my-emails, /tos, /privacy, /logout, 
-// /oauth2callback/login, 
+// /oauth2callback/login, /about_me
 // /oauth2callback/signup, /505
 // /test, /cookies, /:error_page
 
@@ -15,7 +15,7 @@ const { exchangeCodeForToken, send_oauth2, send_email } = require('./common/send
 const { readFile, changeLogin, writeFile } = require('./common/readfile');
 const { store_cookie } = require('./common/cookie');
 const { is_loggedin } = require('./common/is_loggedin');
-const { getUsers, getUserById, getUserByEmail, createUser, updateUser } = require('./common/neon');
+const { getUsers, createUser, updateUser } = require('./common/neon');
 const { send } = require('process');
 
 // express
@@ -44,7 +44,6 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 app.get("/", async (req, res) => {
-    console.log("hi")
     const result = await readFile(path.join(templates, 'main.html'));
     if (req.query && req.query.login) {
         changeLogin(result, req, res)
@@ -70,7 +69,7 @@ app.get('/signup', async (req, res) => {
         res.status(500).send('Server Error');
         return false;
     }
-    changeLogin(result, req, res, {oauth: `${link}`});
+    changeLogin(result, req, res, {oauth: `${link}`, title: 'signup'});
     return true;
 });
 
@@ -101,7 +100,7 @@ app.get('/login', async (req, res) => {
 });
 
 app.get('/my-emails', async (req, res) => {
-    if (await is_loggedin(false, req, res, {url: main_page + "signup"})) return true;
+    if (await is_loggedin(true, req, res, {url: main_page + "signup"})) return true;
     const result = await readFile(path.join(templates, 'my-emails.html'));
     changeLogin(result, req, res, {name: req.cookies.name});
 });
@@ -130,6 +129,7 @@ app.get('/logout', async (req, res) => {
 });
 
 app.get("/oauth2callback/login", async (req, res) => {
+    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
     try {
         const code = req.query.code;
         if (!code) {
@@ -153,6 +153,19 @@ app.get("/oauth2callback/login", async (req, res) => {
             name: userInfo.name,
             email: userInfo.email
         }
+        const is_user = await getUsers().then(users => {
+            for (const user of users) {
+                if (cookie.email == user.email) return true
+            };
+            return false
+        });
+        if (!is_user) {
+            // create a user using cookie paramaters(name, email, oauth)
+            createUser(cookie)
+            store_cookie(cookie, result.expiry_date - Date.now(), req, res);
+            res.redirect('/?signup=true')
+            return true;
+        }
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?login=true'); // Redirect with query parameter
         return true;
@@ -164,6 +177,7 @@ app.get("/oauth2callback/login", async (req, res) => {
 });
 
 app.get("/oauth2callback/signup", async (req, res) => {
+    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
     try {
         const code = req.query.code;
         if (!code) {
@@ -191,6 +205,18 @@ app.get("/oauth2callback/signup", async (req, res) => {
             name: userInfo.name,
             email: userInfo.email
         }
+        const is_user = await getUsers().then(users => {
+            for (const user of users) {
+                if (cookie.email == user.email) return true
+            };
+            return false
+        });
+        if (is_user) {
+            // create a user using cookie paramaters(name, email, oauth)
+            store_cookie(cookie, result.expiry_date - Date.now(), req, res);
+            res.redirect('/login?success=true')
+            return true;
+        }
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?signup=true'); // Redirect with query parameter
         return true;
@@ -198,6 +224,16 @@ app.get("/oauth2callback/signup", async (req, res) => {
         console.error('Error in /oauth2callback/login route:', error);
         res.status(500).send('Server Error');
         return false;
+    }
+});
+
+app.get("/about_me", async (req, res) => {
+    try{
+    res.send(await getUsers())
+    return false;
+    } catch (e) {
+        console.log(e)
+        return true;
     }
 });
 
@@ -210,11 +246,25 @@ app.get("/send_email", async (req, res) => {
     (send_email(req)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
     return true;
 });
+
 app.get("/505", async (req, res) => {
     const result = await readFile(path.join(templates, '505.html'));
     changeLogin(result, req, res);
 });
 
+// technical stuff
+app.get("/cookies", async (req, res) => {
+    // Check if the user is logged in    
+    // Read the cookies from the request
+    // Send the response
+    res.send(req.cookies);
+});
+
+app.get("/test", async (req, res) => {
+    const result = await readFile(path.join(templates, 'template.html'));
+    changeLogin(result, req, res);
+    return true;
+})
 
 // don't touch
 app.get('/:error_page', async (req, res) => {

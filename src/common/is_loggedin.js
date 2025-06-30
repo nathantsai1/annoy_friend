@@ -5,23 +5,24 @@ const { readFile, changeLogin } = require('./readfile');
 const templates = path.join(__dirname + "/../../templates/404.html");
 
 async function is_loggedin(bool, req, res, entries) {
-    // bool=true means user should not be logged in (block if logged in)
-    // bool=false means user should be logged in (block if not logged in)
+    // bool=false means user should not be logged in (block if logged in)
+    // bool=true means user should be logged in (block if not logged in)
+    const is_token = (await req.cookies && await req.cookies.oauth) ? true : false;
     
-    const hasValidToken = req.cookies && req.cookies.oauth;
-    
-    if ((bool === true && hasValidToken) || (bool === false && !hasValidToken)) {
-        // User doesn't meet the requirement, show 404/redirect
-        const result = await readFile(templates);
-        if (entries) {
-            changeLogin(result, req, res, entries);
-        } else {
-            changeLogin(result, req, res);
-        }
-        return true; // Blocked/redirected
+    if (bool == false && is_token==false) return change(req, res, entries);
+    else if (bool == true && is_token==true) return change(req, res, entries)
+    return false; // to return back to server as
+}
+
+async function change(req, res, entries) {
+    // User doesn't meet the requirement, show 404/redirect
+    const result = await readFile(templates);
+    if (entries) {
+        changeLogin(result, req, res, entries);
     } else {
-        return false; // Allow to continue
+         changeLogin(result, req, res);
     }
+    return true; // Blocked/redirected
 }
 
 module.exports = {
