@@ -19,12 +19,22 @@ async function getUsers() {
 async function createUser(userData) {
   try {
     const { name, email } = userData;
+    // add to users page
     const result = await sql`
       INSERT INTO users (name, email, created_at) 
       VALUES (${name}, ${email}, ${Date.now()}) 
+      RETURNING id
     `;
-    console.log('User created successfully:', await result[0]);
-    return result[0];
+    // add to emails page w/ user_id
+    const userId = result[0].id;
+
+    await sql`
+      INSERT INTO emails (user_id, emails_sent, last_updated) 
+      VALUES (${userId}, 0, ${Date.now()}) 
+    `;
+
+    console.log('User created successfully:', await userId);
+    return userId;
   } catch (e) {
     console.error('Error creating user:', e);
     return false;
@@ -32,12 +42,12 @@ async function createUser(userData) {
 };
 
 // Update user information
-const updateUser = async (userId, userData) => {
+async function updateUser(userId, userData) {
   try {
     const { name, email } = userData;
     const result = await sql`
       UPDATE users 
-      SET name = ${name}, email = ${email}, updated_at = NOW() 
+      SET name = ${name}, email = ${email}
       WHERE id = ${userId} 
       RETURNING *
     `;
@@ -48,8 +58,33 @@ const updateUser = async (userId, userData) => {
   }
 };
 
+async function getEmailsSent(userId){
+  try {
+    const result = await sql `
+      SELECT * FROM emails
+      WHERE user_id = ${userId.toString()}`
+    if (!result) return false;
+    return result
+  } catch(e) {
+    console.log("./src/neon getEmailsSent err: ", e)
+    return false;
+  }
+}
+
+async function general_neon(input) {
+   try {
+    const result = await sql `${input}`;
+    if (!result) return false;
+    return result
+  } catch(e) {
+    console.log("./src/neon getEmailsSent err: ", e)
+    return false;
+  }
+}
 module.exports = {
   getUsers,
   createUser,
-  updateUser
+  updateUser,
+  getEmailsSent,
+  general_neon
 };

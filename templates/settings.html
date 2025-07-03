@@ -15,13 +15,35 @@
     <main>
         <h2>{{title}}</h2>
         <p>
-            in p thing
+            Change your user information here
         </p>
-        <div class="cta">More coming soon! This is just a placeholder for now.</div>
-        <div class="cta">
-            <a href="/about">Learn More</a>
+        <div id="form">
+            <div class="cta">Name: {{name}}</div>
+            <div class="cta">Email: {{email}}</div>
+            <div class="cta">#Emails sent(resets after 24 hours/last use if over 24 hours): {{num_emails}}</div>
+            <div class="cta">Last used: {{date}}</div>
+            <div class="cta">
+                <a id="button">update information</a>
+            </div>
         </div>
     </main>
     {{footer}}
+    <script>
+        const change_form = document.getElementById("form");
+        const button = document.getElementById("button");
+
+        button.onclick = function(){
+            change_form.innerHTML = `
+            <form action="/update_info" method="post">
+                <div class="cta">Name: <input type="text" id="name" name="name" placeholder="{{name}}"></div>
+                <div class="cta">Email: {{email}}</div>
+                <div class="cta">#Emails sent today: {{num_emails}}</div>
+                <div class="cta">Last used: {{date}}</div>
+                <div class="cta">
+                    <input type="submit" value="Update information" class="btn-primary cta" id="submit-button">
+                </div>
+            </form>`
+        }
+    </script>
 </body>
 </html>

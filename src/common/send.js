@@ -30,10 +30,22 @@ async function send_oauth2(i) {
   }
 }
 
-async function exchangeCodeForToken(code) {
-  try {
+async function takeToken(code) {
+  try {    
+    // Ensure oAuth2Client is initialized
+    if (!oAuth2Client) {
+      const keys = JSON.parse(await fs.readFile(KEYFILE, 'utf8')).web;
+      oAuth2Client = new google.auth.OAuth2(
+        keys.client_id,
+        keys.client_secret,
+        keys.redirect_uris[0] // Use first redirect URI as default
+      );
+    }
+    
     const {tokens} = await oAuth2Client.getToken(code);
+    console.log(1)
     oAuth2Client.setCredentials(tokens);
+    console.log(2)
     google.options({auth: oAuth2Client});
     console.log('Tokens obtained:', tokens);
     return tokens;
@@ -74,7 +86,7 @@ async function send_email(req) {
      `Content-Type: text/html; charset=UTF-8`,
      `MIME-Version: 1.0`,
      `Subject: ${req.query.subject}`,
-     ``, // This blank line is REQUIRED to separate headers from body
+     ``, // seperate headers from body
      `${req.query.content}`
    ].filter(line => line !== null); // Filter out null values, but keep empty strings
     
@@ -82,9 +94,7 @@ async function send_email(req) {
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
-    
-    console.log('Prepared email:', emailLines.join('\r\n'));
-    console.log('Content value:', req.query.content); // Debug log
+      
     const res = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
@@ -98,4 +108,4 @@ async function send_email(req) {
     return false;
   }
 }
-module.exports =  { exchangeCodeForToken, send_oauth2, send_email };
+module.exports =  { takeToken, send_oauth2, send_email };

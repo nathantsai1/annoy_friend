@@ -7,17 +7,16 @@ async function store_cookie(entries, time, req, res) {
         console.log('Existing cookies found:', existingCookies);
         console.log('Overwriting cookies...');
     }
-
+    entries.time = time + Date.now();
     // Set new cookies
     try {
         const cookieKeys = [];
         for (const [key, value] of Object.entries(entries)) {
-            if (typeof value !== 'string') {
+            if (typeof value !== 'string' && typeof value !== 'number') {
                 console.error(`Invalid value for cookie ${key}: must be a string`);
                 return false;
             }
             
-            console.log(`Setting cookie: ${key}=${value}`);
             res.cookie(key, value, {
                 maxAge: time, 
                 httpOnly: true, 
@@ -33,7 +32,6 @@ async function store_cookie(entries, time, req, res) {
         return false;
     }
 
-    console.log('All cookies have been set successfully');
     return true;
 }
 
