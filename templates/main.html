@@ -48,6 +48,8 @@
             showBanner('Logout successful! Please use Annoy-Friend again!');
         } else if (urlParams.get('update') === 'true') {
             showBanner(`Update successful! Welcome ${urlParams.get('name')}!`);
+        } else if (urlParams.get('email') === 'true') {
+            showBanner(`Email sent successfully!`);
         }
 
         function createConfetti() {
@@ -100,7 +102,7 @@
             
             // Remove success parameter from URL
             const url = new URL(window.location);
-            ['login', 'signup', 'logout', 'update', 'name'].forEach(param => url.searchParams.delete(param));
+            ['login', 'signup', 'logout', 'update', 'name', 'email'].forEach(param => url.searchParams.delete(param));
             window.history.replaceState({}, document.title, url);
             location.reload();
         }

@@ -1,11 +1,7 @@
-// todo: /about, /main /signup, /login /my-emails
-
-// links: /favicon.ico, /, /about, /signup, /login, 
-// /my-emails, /tos, /privacy, /logout, 
-// /oauth2callback/login, /settings
-// /oauth2callback/signup, /505
-// /test, /cookies, /:error_page
-
+// links: /, /about, /signup, /login, /my-emails
+// more: /tos, /privacy, /logout
+// even more: /oauth2callback/login, /oauth2callback/signup
+// and more: /settings, /send_email, /505, /update_info
 const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
@@ -15,7 +11,7 @@ const { takeToken, send_oauth2, send_email } = require('./common/send');
 const { readFile, changeLogin, writeFile } = require('./common/readfile');
 const { store_cookie } = require('./common/cookie');
 const { is_loggedin } = require('./common/is_loggedin');
-const { getUsers, createUser, updateUser, getEmailsSent, general_neon } = require('./common/neon');
+const { getUsers, createUser, updateUser, getEmailsSent, updateEmail } = require('./common/neon');
 const { gemini } = require('./common/gemini');
 // express
 const app = express();
@@ -34,8 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // yummmm cookies!
 const cookieParser = require('cookie-parser');
-const { write } = require('fs');
-app.use(cookieParser()); // Add this line
+app.use(cookieParser());
 
 // Serve favicon
 app.get("favicon.ico", (req, res) => {
@@ -45,14 +40,18 @@ app.get("favicon.ico", (req, res) => {
 app.get("/", async (req, res) => {
     const result = await readFile(path.join(templates, 'main.html'));
     if (req.query && req.query.login) {
+        // if logged in change navbar
         changeLogin(result, req, res)
      } else {
+        // if not logged in no change navbar
         changeLogin(result, req, res, {login: `${req.query.login}`, signup: `${req.query.signup}`});
      }
-
     return true;
 });
 
+app.get('/home', async (req, res) => {
+    res.redirect('/')
+})
 app.get("/about", async (req, res) => {
     const result = await readFile(path.join(templates, 'about.html'));
     changeLogin(result, req, res);
@@ -60,7 +59,10 @@ app.get("/about", async (req, res) => {
 });
 
 app.get("/signup", async (req, res) => {
+    // cool checker for cookies
     if (await is_loggedin(false, req, res, {url: main_page + "signup"})) return true;
+    
+    // send signup html
     const result = await readFile(path.join(templates, 'signup.html'));
     const link = await send_oauth2(1);
     if (result === false || link === false) {
@@ -100,6 +102,7 @@ app.get("/login", async (req, res) => {
 
 app.get("/my-emails", async (req, res) => {
     if (await is_loggedin(true, req, res, {url: main_page + "my-emails"})) return true;
+    
     const result = await readFile(path.join(templates, 'my-emails.html'));
     changeLogin(result, req, res, {name: req.cookies.name});
 });
@@ -124,11 +127,15 @@ app.get("/logout", async (req, res) => {
 app.get("/oauth2callback/login", async (req, res) => {
     if (await is_loggedin(false, req, res, {url: main_page + "login"})) return true;
     try {
+        // get code
         const code = req.query.code;
         if (!code) {
-            res.status(500).send('Server error');
-            return false;
+            const result = await readFile(path.join(templates, '404.html'));
+            changeLogin(result, req, res);
+            return false
         }
+        
+        // get token
         const result = await takeToken(code);
         if (!result) throw new Error("Noooooooooooooooooooooooooooooooooo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
@@ -138,6 +145,8 @@ app.get("/oauth2callback/login", async (req, res) => {
                 'Accept': 'application/json'
             }
         });
+
+        // get user info
         const userInfo = await response.json();
         const is_user = await getUsers().then(users => {
             for (const user of users) {
@@ -146,6 +155,7 @@ app.get("/oauth2callback/login", async (req, res) => {
             return [false, users[users.length - 1] + 1];
         });
 
+        // store cookie
         let cookie = {
             oauth: result.access_token,
             scopes: result.scope,
@@ -153,16 +163,16 @@ app.get("/oauth2callback/login", async (req, res) => {
             email: userInfo.email,
         }
          if (!is_user[0]) {
+            // not a user, sign up
             // create a user using cookie paramaters(name, email, oauth)
             cookie.id = await createUser(cookie);
-            console.log(cookie);
             store_cookie(cookie, result.expiry_date - Date.now(), req, res);
 
             res.redirect('/?signup=true')
             return true;
         }
+        // user, sign in
         cookie.id = is_user[1];
-        console.log(cookie);
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?login=true'); // Redirect with query parameter
         return true;
@@ -176,12 +186,15 @@ app.get("/oauth2callback/login", async (req, res) => {
 app.get("/oauth2callback/signup", async (req, res) => {
     if (await is_loggedin(false, req, res, {url: main_page + "login"})) return true;
     try {
+        // get code
         const code = req.query.code;
         if (!code) {
-            res.status(500).send('Server error');
+            const result = await readFile(path.join(templates, '505.html'));
+            changeLogin(result, req, res);
             return false;
         }
-        console.log(code)
+
+        // exchange code for token
         const result = await takeToken(code);
         if (result === false) {
             res.status(500).sendFile(templates + '505.html');
@@ -194,6 +207,7 @@ app.get("/oauth2callback/signup", async (req, res) => {
                 'Accept': 'application/json'
             }
         });
+        // parse info
         const userInfo = await response.json();
         const is_user = await getUsers().then(users => {
             for (const user of users) {
@@ -201,6 +215,8 @@ app.get("/oauth2callback/signup", async (req, res) => {
             };
             return [false, users[users.length - 1].id + 1]
         });
+
+        // store cookie
         let cookie = {
             oauth: result.access_token,
             scopes: result.scope,
@@ -209,15 +225,15 @@ app.get("/oauth2callback/signup", async (req, res) => {
         }
         // create a user using cookie paramaters(name, email, oauth)
         if (is_user[0] == true) {
+            // log in
             cookie.id = is_user[1];
-            console.log(cookie)
             store_cookie(cookie, result.expiry_date - Date.now(), req, res);
             res.redirect('/?login=true')
             return true;
         }
+        // create user/sign up
         const user = await createUser(cookie)
         cookie.id = user;
-        console.log(cookie)
         store_cookie(cookie, result.expiry_date - Date.now(), req, res);
         res.redirect('/?signup=true'); // Redirect with query parameter
         return true;
@@ -231,8 +247,11 @@ app.get("/oauth2callback/signup", async (req, res) => {
 app.get("/settings", async (req, res) => {
     if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
     try{
+        // get settings.html
         const result = await readFile(path.join(templates, 'settings.html'));
         const emails_sent = await getEmailsSent(req.cookies.id)
+        
+        // get ready to add information
         const entries = {
             name: req.cookies.name,
             title: 'Settings',
@@ -240,6 +259,7 @@ app.get("/settings", async (req, res) => {
             email: req.cookies.email,
             date: new Date(Number(emails_sent[0].last_updated))
         }
+        // add information
         changeLogin(result, req, res, entries);
         return true;
     } catch (e) {
@@ -250,62 +270,58 @@ app.get("/settings", async (req, res) => {
 });
 
 app.get("/send_email", async (req, res) => {
+    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
+    
+    // check for required parameters
     if (!req.query || !req.query.email || !req.query.recipient || !req.query.subject || !req.query.content || !req.query.ai) {
         res.status(400).send('Bad Request: Missing required query parameters');
         return false;
     }
     
-    (send_email(req)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
+    // if user wants ai
+    if (req.query.ai && req.query.ai == 'true') {
+        // get prompt
+        const prompt = req.query.prompt;
+        if (!prompt == prompt) throw new Error('error');
+
+        // create modified req to change req.query.content w/gemini
+        let modifiedQuery = { 
+            cookies: req.cookies,
+            query: {
+                email: req.query.email,
+                cc: req.query.cc,
+                bcc: req.query.bcc,
+                subject: req.query.subject,
+                content: await gemini(prompt)
+            }
+        };
+        // send email
+        (send_email(modifiedQuery)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
+    }
+    else (send_email(req)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
+    updateEmail(req);
     return true;
 });
 
 app.get("/505", async (req, res) => {
+    // 505 err, not really needed
     const result = await readFile(path.join(templates, '505.html'));
     changeLogin(result, req, res);
     return true;
 });
 
-app.get("/gemini", async (req, res) => {
-    const prompt = await readFile(path.join(__dirname, './../txt/content.ex.txt'));
-    await gemini(prompt);
-    console.log('/server-end worked')
-    res.redirect(`/505`)
-})
 app.post("/update_info", async (req, res) => {
+    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
+    
+    // update info from /settings(literally just name)
     if (!req.body && !req.body.name) {
         const result = await readFile(path.join(templates, '404.html'));
         changeLogin(result, req, res);
     }
-    // todo: change name from req.cookies.name to req.body.name and in neon
-    // change name in: cookie, neon
+    // change name in: req.cookies, neon
     store_cookie({name: req.body.name.toString()}, req.cookies.time - Date.now(), req, res);
     updateUser(req.cookies.id, {name: req.body.name, email: req.cookies.email})
-    console.log(req.body);
     res.redirect(`/?update=true&name=${req.body.name}`)
-});
-
-// technical stuff
-app.get("/cookies", async (req, res) => {
-    // Check if the user is logged in    
-    // Read the cookies from the request
-    // Send the response
-    res.send(req.cookies);
-});
-
-app.get("/test", async (req, res) => {
-    // sending right information for /User_info
-    const result = await readFile(path.join(templates, 'settings.html'));
-    const emails_sent = await getEmailsSent(req.cookies.id)
-    const entries = {
-        name: req.cookies.name,
-        title: 'Settings',
-        num_emails: emails_sent[0].emails_sent,
-        email: req.cookies.email,
-        date: new Date(Number(emails_sent[0].last_updated))
-    }
-
-    changeLogin(result, req, res, entries);
-    return true;
 });
 
 // don't touch

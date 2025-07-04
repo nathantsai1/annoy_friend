@@ -71,11 +71,22 @@ async function getEmailsSent(userId){
   }
 }
 
-async function general_neon(input) {
-   try {
-    const result = await sql `${input}`;
-    if (!result) return false;
-    return result
+async function updateEmail(req) {
+  try {
+    const sent = `SELECT * FROM emails
+    WHERE id = ${req.cookies.id}`
+    
+    if (Date.now() - sent.last_updated > 24*60*60*1000) {
+      // if before 24 hours
+      const result = await sql `UPDATE emails 
+        SET emails_sent = ${sent.emails_sent + 1}
+        WHERE id = ${Number(req.cookies.id)} `
+    } else {
+      const result = await sql `UPDATE emails 
+        SET emails_sent = ${1}
+        WHERE id = ${req.cookies.id} `
+    }
+    return true;
   } catch(e) {
     console.log("./src/neon getEmailsSent err: ", e)
     return false;
@@ -86,5 +97,5 @@ module.exports = {
   createUser,
   updateUser,
   getEmailsSent,
-  general_neon
+  updateEmail
 };

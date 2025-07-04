@@ -14,11 +14,11 @@ async function changeLogin(file, req, res, entries) {
     let result;
     if (!req.cookies || !req.cookies.oauth) {
       result = file.replace(/{{login}}/g, `<a href="/signup">Sign Up</a><a href="/login">Login</a>`)
-            .replace(/{{footer}}/g, '<footer><div class="footer-nav"><a href="/privacy">Privacy Policy</a><span> | </span><a href="/tos">Terms of Service</a><span> | </span><a href="/about">About</a></div><p>&copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.</p></footer>')
+            .replace(/{{footer}}/g, '<footer><div class="footer-nav"><a href="/privacy">Privacy Policy</a><span> | </span><a href="/tos">Terms of Service</a><span> | </span><a href="/about">About</a></div><p>&copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and NeonDB.</p></footer>')
             .replace(/{{head}}/g, `<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Annoy-Friend | {{title}}</title><link rel="stylesheet" href="/static/styles.css">`);
     } else {
       result = file.replace(/{{login}}/g, `<a href="/my-emails">My Emails</a><a href="/settings">Settings</a><a href="/logout">Logout</a>`)
-      .replace(/{{footer}}/g, '<footer><div class="footer-nav"><a href="/privacy">Privacy Policy</a><span> | </span><a href="/tos">Terms of Service</a><span> | </span><a href="/about">About</a></div><p>&copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and MongoDB.</p></footer>')
+      .replace(/{{footer}}/g, '<footer><div class="footer-nav"><a href="/privacy">Privacy Policy</a><span> | </span><a href="/tos">Terms of Service</a><span> | </span><a href="/about">About</a></div><p>&copy; 2025 Annoy-Friend &mdash; Built with Node.js, Gmail API, and NeonDB.</p></footer>')
       .replace(/{{head}}/g, `<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Annoy-Friend | {{title}}</title><link rel="stylesheet" href="/static/styles.css">`);
     }
     if(entries) {

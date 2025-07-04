@@ -43,11 +43,8 @@ async function takeToken(code) {
     }
     
     const {tokens} = await oAuth2Client.getToken(code);
-    console.log(1)
     oAuth2Client.setCredentials(tokens);
-    console.log(2)
     google.options({auth: oAuth2Client});
-    console.log('Tokens obtained:', tokens);
     return tokens;
   } catch (error) {
     console.error('Error exchanging code for token:', error);
@@ -60,8 +57,6 @@ async function send_email(req) {
       console.error('OAuth token is required to send email');
       return false;
     }
-    console.log(req.cookies.oauth)
-    console.log(1)
 
     if (!oAuth2Client) {
       const keys = JSON.parse(await fs.readFile(KEYFILE, 'utf8')).web;
@@ -101,7 +96,6 @@ async function send_email(req) {
         raw: raw,
       },
     });
-    console.log('Email sent successfully:', res.data);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);

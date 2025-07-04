@@ -1,12 +1,6 @@
 const cookieParser = require('cookie-parser');
 
 async function store_cookie(entries, time, req, res) {
-    // Check if any cookies already exist
-    const existingCookies = Object.keys(entries).filter(key => req.cookies && req.cookies[key]);
-    if (existingCookies.length > 0) {
-        console.log('Existing cookies found:', existingCookies);
-        console.log('Overwriting cookies...');
-    }
     entries.time = time + Date.now();
     // Set new cookies
     try {
@@ -25,14 +19,11 @@ async function store_cookie(entries, time, req, res) {
             });
             cookieKeys.push(key);
         }
-        
-        console.log(`Cookies set: [${cookieKeys.join(', ')}], expires in ${time} ms`);
+        return true;
     } catch (error) {
         console.error('Error setting cookie:', error);
         return false;
     }
-
-    return true;
 }
 
 module.exports = {
