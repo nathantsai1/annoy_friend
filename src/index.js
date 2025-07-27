@@ -5,6 +5,9 @@
 const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
+const cookieParser = require('cookie-parser');
+require('dotenv').config();
+
 
 // my functions 
 const { takeToken, send_oauth2, send_email } = require('./common/send');
@@ -29,7 +32,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // yummmm cookies!
-const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
 // Serve favicon
