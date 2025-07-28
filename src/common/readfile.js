@@ -39,10 +39,10 @@ async function changeLogin(file, req, res, entries) {
 // used to delete useless html bloat that were a part of creating TOS page
 async function writeFile(filePath, data) {
   try {
-    await fs.writeFile(filePath, result, 'utf8');
+    await fs.writeFile(filePath, data, 'utf8');
     return true;
   } catch (error) {
-    console.error('Error writing file:', error);
+    console.error('Error writing file:', filePath, error);
     return false; // Re-throw the error for further handling
   }
 }
