@@ -1,4 +1,7 @@
 services:
+  caddy:
+    networks:
+      - appnet
   node:
     image: "node:18-alpine"
     user: "node"
@@ -10,3 +13,6 @@ services:
     ports:
       - "35295"
     command: "npm start"
+
+networks:
+  appnet:
