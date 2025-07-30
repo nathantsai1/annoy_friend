@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node src/test.js",
     "start": "nodemon src/index.js",
-    "neon": "node src/common/neon.js"
+    "neon": "node src/common/neon.js",
+    "migrate": "knex migrate:latest",
+    "rollback": "knex migrate:rollback"
   },
   "repository": {
     "type": "git",
