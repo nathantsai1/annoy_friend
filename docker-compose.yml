@@ -11,7 +11,7 @@ services:
     volumes:
       - ./:/src
     ports:
-      - "39159"
+      - "35295"
     command: "npm start"
 
 networks:

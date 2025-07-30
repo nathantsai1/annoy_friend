@@ -22,5 +22,5 @@ WORKDIR /src
 
 COPY . .
 
-EXPOSE 39159
+EXPOSE 35295
 CMD ["npm", "start"]
