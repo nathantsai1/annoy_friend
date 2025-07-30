@@ -1,0 +1,12 @@
+services:
+  node:
+    image: "node:18-alpine"
+    user: "node"
+    working_dir: /src
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./:/src
+    ports:
+      - "35295"
+    command: "npm start"
