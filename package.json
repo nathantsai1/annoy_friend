@@ -10,6 +10,9 @@
     "migrate": "knex migrate:latest",
     "rollback": "knex migrate:rollback"
   },
+  "env": {
+    "NODE_ENV": "production"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nathantsai1/annoy_friend.git#main"

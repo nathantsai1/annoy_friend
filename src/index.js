@@ -19,7 +19,7 @@ const { getUsers, createUser, updateUser, getEmailsSent, updateEmail } = require
 const { gemini } = require('./common/gemini');
 // express
 const app = express();
-const PORT = 3000;
+const PORT = 35295;
 
 // what do these paths mean?
 const templates = path.join(__dirname + "/../templates/");
