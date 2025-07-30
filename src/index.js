@@ -7,7 +7,6 @@ const path = require('path');
 const fetch = require('node-fetch');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
-dotenv.config({path: path.join(__dirname, "/.env")});
 
 
 // my functions 
