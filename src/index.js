@@ -8,7 +8,6 @@ const fetch = require('node-fetch');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-
 // my functions 
 const { takeToken, send_oauth2, send_email } = require('./common/send');
 const { readFile, changeLogin, writeFile } = require('./common/readfile');

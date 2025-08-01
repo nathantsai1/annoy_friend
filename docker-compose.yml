@@ -1,7 +1,4 @@
 services:
-  caddy:
-    networks:
-      - appnet
   node:
     image: "node:18-alpine"
     user: "node"
@@ -11,8 +8,9 @@ services:
     volumes:
       - ./:/src
     ports:
-      - "35295"
+      - "8081:35295"
     command: "npm start"
 
 networks:
-  appnet:
+  default:
+    name: appnet
