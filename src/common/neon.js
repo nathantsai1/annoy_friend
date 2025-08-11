@@ -1,6 +1,6 @@
 // connect to neon db
-const { neon } = require('@neondatabase/serverless');
-require('dotenv').config();
+const { neon } = require("@neondatabase/serverless");
+require("dotenv").config();
 
 const sql = neon(process.env.NEON_URL);
 
@@ -10,33 +10,42 @@ async function getUsers() {
     const result = await sql`SELECT * FROM users ORDER BY id ASC`;
     return result;
   } catch (e) {
-    console.error('Error fetching users:', e);
+    console.error("Error fetching users:", e);
     return false;
   }
 };
 
+async function getUser(email) {
+  try {
+    const response = await sql.query(`SELECT id FROM users WHERE email = $1`, [email]);
+    return response;
+  } catch (e) {
+    console.error("Error fetching user:", e);
+    return false;
+  }
+}
 // Create a new user
 async function createUser(userData) {
   try {
     const { name, email } = userData;
     // add to users page
-    const result = await sql`
+    const result = await sql.query(`
       INSERT INTO users (name, email, created_at) 
-      VALUES (${name}, ${email}, ${Date.now()}) 
+      VALUES ($1, $2, $3) 
       RETURNING id
-    `;
+    `, [name, email, Date.now()]);
     // add to emails page w/ user_id
     const userId = result[0].id;
 
-    await sql`
+    await sql.query(`
       INSERT INTO emails (user_id, emails_sent, last_updated) 
-      VALUES (${userId}, 0, ${Date.now()}) 
-    `;
+      VALUES ($1, 0, $2) 
+    `, [userId, Date.now()]);
 
-    console.log('User created successfully:', await userId);
+    console.log("User created successfully:", await userId);
     return userId;
   } catch (e) {
-    console.error('Error creating user:', e);
+    console.error("Error creating user:", e);
     return false;
   }
 };
@@ -45,24 +54,25 @@ async function createUser(userData) {
 async function updateUser(userId, userData) {
   try {
     const { name, email } = userData;
-    const result = await sql`
+    const result = await sql.query(`
       UPDATE users 
       SET name = ${name}, email = ${email}
       WHERE id = ${userId} 
       RETURNING *
-    `;
+    `, [name, email, userId]);
     return result[0] || null;
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error("Error updating user:", error);
     return false;
   }
 };
 
 async function getEmailsSent(userId){
   try {
-    const result = await sql `
+    const result = await sql.query(`
       SELECT * FROM emails
-      WHERE user_id = ${userId.toString()}`
+      WHERE user_id = $1`,
+      [Number(userId)]);
     if (!result) return false;
     return result
   } catch(e) {
@@ -78,13 +88,15 @@ async function updateEmail(req) {
     
     if (Date.now() - sent.last_updated > 24*60*60*1000) {
       // if before 24 hours
-      const result = await sql `UPDATE emails 
-        SET emails_sent = ${sent.emails_sent + 1}
-        WHERE id = ${Number(req.cookies.id)} `
+      await sql.query(`UPDATE emails 
+        SET emails_sent = $1
+        WHERE id = $2 `,
+        [sent.emails_sent + 1, Number(req.cookies.id)]);
     } else {
-      const result = await sql `UPDATE emails 
-        SET emails_sent = ${1}
-        WHERE id = ${req.cookies.id} `
+      await sql.query(`UPDATE emails 
+        SET emails_sent = 1
+        WHERE id = $1 `,
+        [req.cookies.id]);
     }
     return true;
   } catch(e) {
@@ -94,6 +106,7 @@ async function updateEmail(req) {
 }
 module.exports = {
   getUsers,
+  getUser,
   createUser,
   updateUser,
   getEmailsSent,

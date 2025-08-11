@@ -2,21 +2,35 @@
 // more: /tos, /privacy, /logout
 // even more: /oauth2callback/login, /oauth2callback/signup
 // and more: /settings, /send_email, /505, /update_info
-const express = require('express');
-const path = require('path');
-const fetch = require('node-fetch');
-const cookieParser = require('cookie-parser');
-require('dotenv').config();
+const express = require("express");
+const path = require("path");
+const fetch = require("node-fetch");
+const cookieParser = require("cookie-parser");
+
+require("dotenv").config();
+
+const { App, ExpressReceiver } = require("@slack/bolt"); // slack!!
+
 
 // my functions 
-const { takeToken, send_oauth2, send_email } = require('./common/send');
-const { readFile, changeLogin, writeFile } = require('./common/readfile');
-const { store_cookie } = require('./common/cookie');
-const { is_loggedin } = require('./common/is_loggedin');
-const { getUsers, createUser, updateUser, getEmailsSent, updateEmail } = require('./common/neon');
-const { gemini } = require('./common/gemini');
+const { takeToken, send_oauth2, send_email } = require("./common/send");
+const { changeLogin, writeFile } = require("./common/readfile");
+const { store_cookie } = require("./common/cookie");
+const { requireNoAuth, requireAuth } = require("./common/is_loggedin");
+const { getUsers, getUser, createUser, updateUser, getEmailsSent, updateEmail } = require("./common/neon");
+const { gemini } = require("./common/gemini");
+const { validateEmailQuery } = require("./common/check");
 // express
-const app = express();
+
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+});
+const slackApp = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver
+});
+
+const app = receiver.app;
 const PORT = 35295;
 
 // what do these paths mean?
@@ -34,256 +48,118 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Serve favicon
-app.get("favicon.ico", (req, res) => {
-    res.sendFile(path.join(__dirname, '../favicon.ico'));
+app.get("/favicon.ico", (req, res) => {
+    res.sendFile(path.join(__dirname, "./../favicon.ico"));
 });
 
 app.get("/", async (req, res) => {
-    const result = await readFile(path.join(templates, 'main.html'));
     if (req.query && req.query.login) {
         // if logged in change navbar
-        changeLogin(result, req, res)
+        changeLogin("main.html", req, res)
      } else {
         // if not logged in no change navbar
-        changeLogin(result, req, res, {login: `${req.query.login}`, signup: `${req.query.signup}`});
+        changeLogin("main.html", req, res, {login: `${req.query.login}`, signup: `${req.query.signup}`});
      }
     return true;
-});
-
-app.get('/home', async (req, res) => {
-    res.redirect('/')
-})
-app.get("/about", async (req, res) => {
-    const result = await readFile(path.join(templates, 'about.html'));
-    changeLogin(result, req, res);
-    return true;
-});
-
-app.get("/signup", async (req, res) => {
-    // cool checker for cookies
-    if (await is_loggedin(false, req, res, {url: main_page + "signup"})) return true;
-    
-    // send signup html
-    const result = await readFile(path.join(templates, 'signup.html'));
-    const link = await send_oauth2(1);
-    if (result === false || link === false) {
-        console.error('Error reading login.html');
-        res.status(500).send('Server Error');
-        return false;
-    }
-    changeLogin(result, req, res, {oauth: `${link}`, title: 'signup'});
-    return true;
-});
-
-app.get("/login", async (req, res) => {
-    try {
-        // Check if user should be logged in
-        if (await is_loggedin(false, req, res, {url: main_page + "login"})) return true;
-        
-        // Read login template and get OAuth link
-        const result = await readFile(path.join(templates, 'login.html'));
-        const link = await send_oauth2(0);
-        
-        if (result === false || link === false) {
-            console.error('Error reading login.html or generating OAuth link');
-            res.status(500).send('Server Error');
-            return false;
-        }
-        
-        // Render the login page with OAuth link
-        changeLogin(result, req, res, {oauth: `${link}`});
-        return true;
-        
-    } catch (error) {
-        console.error('Error in /login route:', error);
-        res.status(500).send('Server Error');
-        return false;
-    }
-});
-
-app.get("/my-emails", async (req, res) => {
-    if (await is_loggedin(true, req, res, {url: main_page + "my-emails"})) return true;
-    
-    const result = await readFile(path.join(templates, 'my-emails.html'));
-    changeLogin(result, req, res, {name: req.cookies.name});
-});
-
-app.get("/tos", async (req, res) => {
-    const result = await readFile(path.join(templates, 'tos.html'));
-    changeLogin(result, req, res);
-});
-
-app.get("/privacy", async (req, res) => {
-    const result = await readFile(path.join(templates, 'privacy.html'));
-    changeLogin(result, req, res);
 });
 
 app.get("/logout", async (req, res) => {
     // clear cookies
     Object.keys(req.cookies).forEach(key => res.clearCookie(key));
-    res.redirect('/?logout=true'); // Redirect to login page after logout
+    res.redirect("/?logout=true"); // Redirect to login page after logout
     return true;
 });
 
-app.get("/oauth2callback/login", async (req, res) => {
-    if (await is_loggedin(false, req, res, {url: main_page + "login"})) return true;
+app.get("/oauth2callback/:request", requireNoAuth, async (req, res) => {
+    if (req.params.request != "login" && req.params.request != "signup") throw new Error("Not valid url")
     try {
-        // get code
         const code = req.query.code;
         if (!code) {
-            const result = await readFile(path.join(templates, '404.html'));
-            changeLogin(result, req, res);
-            return false
-        }
-        
-        // get token
-        const result = await takeToken(code);
-        if (!result) throw new Error("Noooooooooooooooooooooooooooooooooo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${result.access_token}`,
-                'Accept': 'application/json'
-            }
-        });
-
-        // get user info
-        const userInfo = await response.json();
-        const is_user = await getUsers().then(users => {
-            for (const user of users) {
-                if (userInfo.email == user.email) return [true, user.id]
-            };
-            return [false, users[users.length - 1] + 1];
-        });
-
-        // store cookie
-        let cookie = {
-            oauth: result.access_token,
-            scopes: result.scope,
-            name: userInfo.name,
-            email: userInfo.email,
-        }
-         if (!is_user[0]) {
-            // not a user, sign up
-            // create a user using cookie paramaters(name, email, oauth)
-            cookie.id = await createUser(cookie);
-            store_cookie(cookie, result.expiry_date - Date.now(), req, res);
-
-            res.redirect('/?signup=true')
-            return true;
-        }
-        // user, sign in
-        cookie.id = is_user[1];
-        store_cookie(cookie, result.expiry_date - Date.now(), req, res);
-        res.redirect('/?login=true'); // Redirect with query parameter
-        return true;
-    } catch (error) {
-        console.error('Error in /oauth2callback/login route:', error);
-        res.status(500).send('Server Error');
-        return false;
-    }
-});
-
-app.get("/oauth2callback/signup", async (req, res) => {
-    if (await is_loggedin(false, req, res, {url: main_page + "login"})) return true;
-    try {
-        // get code
-        const code = req.query.code;
-        if (!code) {
-            const result = await readFile(path.join(templates, '505.html'));
-            changeLogin(result, req, res);
+            changeLogin("505.html", req, res);
             return false;
         }
 
         // exchange code for token
         const result = await takeToken(code);
         if (result === false) {
-            res.status(500).sendFile(templates + '505.html');
+            res.status(500).sendFile(templates + "505.html");
             return false;
         }
-        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-            method: 'GET',
+
+        const response = await fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+            method: "GET",
             headers: {
-                'Authorization': `Bearer ${result.access_token}`,
-                'Accept': 'application/json'
+                "Authorization": `Bearer ${result.access_token}`,
+                "Accept": "application/json"
             }
         });
+
         // parse info
         const userInfo = await response.json();
-        const is_user = await getUsers().then(users => {
-            for (const user of users) {
-                if (userInfo.email == user.email) return [true, user.id]
-            };
-            return [false, users[users.length - 1].id + 1]
-        });
-
-        // store cookie
+        const is_user = await getUser(userInfo.email);
         let cookie = {
             oauth: result.access_token,
             scopes: result.scope,
             name: userInfo.name,
             email: userInfo.email,
         }
-        // create a user using cookie paramaters(name, email, oauth)
-        if (is_user[0] == true) {
-            // log in
-            cookie.id = is_user[1];
+
+        if (is_user.length == 0) {
+            // user email not found. sign up
+            const user = await createUser(cookie);
+            cookie.id = user;
             store_cookie(cookie, result.expiry_date - Date.now(), req, res);
-            res.redirect('/?login=true')
+            res.redirect("/?signup=true"); // Redirect with query parameter
+        } else {
+            // log in
+            cookie.id = is_user[0].id;
+            store_cookie(cookie, result.expiry_date - Date.now(), req, res);
+            res.redirect("/?login=true")
             return true;
         }
-        // create user/sign up
-        const user = await createUser(cookie)
-        cookie.id = user;
-        store_cookie(cookie, result.expiry_date - Date.now(), req, res);
-        res.redirect('/?signup=true'); // Redirect with query parameter
-        return true;
-    } catch (error) {
-        console.error('Error in /oauth2callback/login route:', error);
-        res.status(500).send('Server Error');
+
+    } catch(e) {
+        console.error(`Error in /oauth2callback/${req.params.request} route:`, error);
+        res.status(500).send("Server Error");
         return false;
     }
-});
 
-app.get("/settings", async (req, res) => {
-    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
+});
+app.get("/settings", requireAuth, async (req, res) => {
     try{
-        // get settings.html
-        const result = await readFile(path.join(templates, 'settings.html'));
         const emails_sent = await getEmailsSent(req.cookies.id)
         
         // get ready to add information
         const entries = {
             name: req.cookies.name,
-            title: 'Settings',
+            title: "Settings",
             num_emails: emails_sent[0].emails_sent,
             email: req.cookies.email,
             date: new Date(Number(emails_sent[0].last_updated))
-        }
+        };
+
         // add information
-        changeLogin(result, req, res, entries);
+        changeLogin("settings.html", req, res, entries);
         return true;
     } catch (e) {
         console.error(e);
-        res.redirect('/505')
+        res.redirect("/505")
         return false;
     }
 });
 
-app.get("/send_email", async (req, res) => {
-    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
-    
+app.get("/send_email", requireAuth, async (req, res) => {
     // check for required parameters
-    if (!req.query || !req.query.email || !req.query.recipient || !req.query.subject || !req.query.content || !req.query.ai) {
-        res.status(400).send('Bad Request: Missing required query parameters');
+    if (!validateEmailQuery(req.query)) {
+        res.status(400).send("Bad Request: Missing required query parameters");
         return false;
     }
     
     // if user wants ai
-    if (req.query.ai && req.query.ai == 'true') {
+    if (req.query.ai && req.query.ai == "true") {
         // get prompt
         const prompt = req.query.prompt;
-        if (!prompt == prompt) throw new Error('error');
+        if (!prompt == prompt) throw new Error("error");
 
         // create modified req to change req.query.content w/gemini
         let modifiedQuery = { 
@@ -297,48 +173,114 @@ app.get("/send_email", async (req, res) => {
             }
         };
         // send email
-        (send_email(modifiedQuery)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
+        res.redirect(`/my-emails?success=${ await send_email(modifiedQuery)}`);
     }
-    else (send_email(req)) ? res.redirect('/my-emails?success=true') : res.redirect('/my-emails?success=false');
+    else res.redirect(`/my-emails?success=${await send_email(req)}`);
     updateEmail(req);
     return true;
 });
 
-app.get("/505", async (req, res) => {
+
+app.get("/test", async (req, res) => {
     // 505 err, not really needed
-    const result = await readFile(path.join(templates, '505.html'));
-    changeLogin(result, req, res);
+    console.log(await getUser("; DROP TABLE blah;"));
     return true;
 });
 
-app.post("/update_info", async (req, res) => {
-    if (await is_loggedin(true, req, res, {url: main_page + "login"})) return true;
-    
+app.post("/update_info", requireAuth, async (req, res) => {    
     // update info from /settings(literally just name)
     if (!req.body && !req.body.name) {
-        const result = await readFile(path.join(templates, '404.html'));
-        changeLogin(result, req, res);
+        changeLogin("404.html", req, res);
     }
-    // change name in: req.cookies, neon
-    store_cookie({name: req.body.name.toString()}, req.cookies.time - Date.now(), req, res);
-    updateUser(req.cookies.id, {name: req.body.name, email: req.cookies.email})
-    res.redirect(`/?update=true&name=${req.body.name}`)
+    // change name in: 
+    store_cookie({name: req.body.name.toString()}, req.cookies.time - Date.now(), req, res); // req.cookies
+    updateUser(req.cookies.id, {name: req.body.name, email: req.cookies.email}); // neon
+    res.redirect(`/?update=true&name=${req.body.name}`);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+app.get("/auth/slack", async ( req, res ) => {
+    const body = req.query; // get query
+    const code = body.code; // get oauth code
+
+    const result = fetch("https://slack.com/api/oauth.v2.access", {
+        method: "POST",
+        body: JSON.stringify({ 
+            client_secret: process.env.SLACK_CLIENT_SECRET,
+            client_id: process.env.SLACK_CLIENT_ID,
+            code: code
+        }),
+    });
+
+    res.send(result)
+
+})
+
+app.get("/slack/test", async (req, res) => {
+    const result = await fetch("https://slack.com/api/" + "users.profile.get", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+            "Authorization": "Bearer " + process.env.SLACK_USER_TOKEN,
+        }
+    });
+
+    const data = await result.json();
+    res.send(data);
+})
+
+
+
+
+
+
+
+
+
+
+
 
 // don't touch
 app.get("/:error_page", async (req, res) => {
-    // Handle 404 errors
-    const result = await readFile(path.join(templates, '404.html'));
-    if (result === false) {
-        console.error('Error reading 404.html');
-        res.status(500).send('Server Error');
-        return false;
-    } else {
-        changeLogin(result, req, res, {url: `${main_page + req.originalUrl}`});
+    let path = req.params.error_page
+    if (path == "login" || path == "signup") {
+        // login or sign up
+        const link = await send_oauth2(path);
+        if (link == false) {
+            console.error("Error reading login.html");
+            res.redirect("/505");
+        }
+        changeLogin(path + ".html", req, res, {
+            title: String(path).charAt(0).toUpperCase() + String(path).slice(1), 
+            oauth: link
+        });
+        return true;
     }
+
+    let possible_paths = ["my-emails", "tos", "privacy", "about", "505"];
+    // loop through paths to see if any are viable options
+    for (let i in possible_paths) {
+        if (possible_paths[i].toLowerCase() == path) {
+            changeLogin(possible_paths[i].toLowerCase() + ".html", req, res, {name: req.cookies.name});
+            return true; // redirected succcessfully
+        }
+    }
+    // else Handle 404 errors
+    changeLogin("404.html", req, res, {url: `${main_page + req.originalUrl}`});
     return true;
 });
 
-app.listen(PORT, () => {
+(async () => {
+    await slackApp.start(process.env.PORT || PORT);
     console.log(`Server running at http://localhost:${PORT}/`);
-});
+})();

@@ -1,8 +1,9 @@
 const path = require("path");
+require("dotenv").config();
 
-const { readFile, changeLogin } = require('./readfile');
+const { changeLogin } = require("./readfile");
 
-const templates = path.join(__dirname + "/../../templates/404.html");
+const main_page = process.env.MAIN_URL;
 
 async function is_loggedin(bool, req, res, entries) {
     // bool=false means user should not be logged in (block if logged in)
@@ -14,17 +15,28 @@ async function is_loggedin(bool, req, res, entries) {
     return false; // to return back to server as
 }
 
+const requireAuth = async (req, res, next) => {
+  if (await is_loggedin(true, req, res, {url: main_page + "login"})) return; // if user is not logged in
+  next(); // Continue to the actual route handler if logged in
+};
+
+const requireNoAuth = async (req, res, next) => {
+  if (await is_loggedin(false, req, res, {url: main_page + req.path})) return; // if user has logged in
+  next(); // Continue if not logged in
+};
+
 async function change(req, res, entries) {
     // User doesn't meet the requirement, show 404/redirect
-    const result = await readFile(templates);
     if (entries) {
-        changeLogin(result, req, res, entries);
+        changeLogin("404.html", req, res, entries);
     } else {
-         changeLogin(result, req, res);
+         changeLogin("404.html", req, res);
     }
     return true; // Blocked/redirected
 }
 
 module.exports = {
     is_loggedin,
+    requireNoAuth,
+    requireAuth
 };

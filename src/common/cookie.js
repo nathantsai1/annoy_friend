@@ -1,4 +1,4 @@
-const cookieParser = require('cookie-parser');
+const cookieParser = require("cookie-parser");
 
 async function store_cookie(entries, time, req, res) {
     entries.time = time + Date.now();
@@ -6,7 +6,7 @@ async function store_cookie(entries, time, req, res) {
     try {
         const cookieKeys = [];
         for (const [key, value] of Object.entries(entries)) {
-            if (typeof value !== 'string' && typeof value !== 'number') {
+            if (typeof value !== "string" && typeof value !== "number") {
                 console.error(`Invalid value for cookie ${key}: must be a string`);
                 return false;
             }
@@ -14,14 +14,14 @@ async function store_cookie(entries, time, req, res) {
             res.cookie(key, value, {
                 maxAge: time, 
                 httpOnly: true, 
-                secure: process.env.NODE_ENV === 'production', 
-                sameSite: 'Strict'
+                secure: process.env.NODE_ENV === "production", 
+                sameSite: "Strict"
             });
             cookieKeys.push(key);
         }
         return true;
     } catch (error) {
-        console.error('Error setting cookie:', error);
+        console.error("Error setting cookie:", error);
         return false;
     }
 }
