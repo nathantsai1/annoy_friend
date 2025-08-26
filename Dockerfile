@@ -2,7 +2,7 @@ FROM node:18-alpine AS deps
 WORKDIR /src
 
 COPY package.json package-lock.json ./
-RUN npm
+RUN npm install
 
 # Final stage: run the production server
 FROM node:18-alpine AS runner

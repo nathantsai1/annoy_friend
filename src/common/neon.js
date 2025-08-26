@@ -7,7 +7,8 @@ const sql = neon(process.env.NEON_URL);
 // Get all users from the database
 async function getUsers() {
   try {
-    const result = await sql`SELECT * FROM users ORDER BY id ASC`;
+    const result = await sql.query(`SELECT * FROM users
+      ORDER BY id ASC`);
     return result;
   } catch (e) {
     console.error("Error fetching users:", e);
@@ -29,16 +30,16 @@ async function createUser(userData) {
   try {
     const { name, email } = userData;
     // add to users page
-    const result = await sql.query(`
-      INSERT INTO users (name, email, created_at) 
+    const result = await sql.query(`INSERT INTO users 
+      (name, email, created_at) 
       VALUES ($1, $2, $3) 
       RETURNING id
     `, [name, email, Date.now()]);
     // add to emails page w/ user_id
     const userId = result[0].id;
 
-    await sql.query(`
-      INSERT INTO emails (user_id, emails_sent, last_updated) 
+    await sql.query(`INSERT INTO emails 
+      (user_id, emails_sent, last_updated) 
       VALUES ($1, 0, $2) 
     `, [userId, Date.now()]);
 
@@ -54,10 +55,9 @@ async function createUser(userData) {
 async function updateUser(userId, userData) {
   try {
     const { name, email } = userData;
-    const result = await sql.query(`
-      UPDATE users 
-      SET name = ${name}, email = ${email}
-      WHERE id = ${userId} 
+    const result = await sql.query(`UPDATE users 
+      SET name = $1, email = $2
+      WHERE id = $3
       RETURNING *
     `, [name, email, userId]);
     return result[0] || null;
@@ -69,8 +69,7 @@ async function updateUser(userId, userData) {
 
 async function getEmailsSent(userId){
   try {
-    const result = await sql.query(`
-      SELECT * FROM emails
+    const result = await sql.query(`SELECT * FROM emails
       WHERE user_id = $1`,
       [Number(userId)]);
     if (!result) return false;
@@ -83,8 +82,9 @@ async function getEmailsSent(userId){
 
 async function updateEmail(req) {
   try {
-    const sent = `SELECT * FROM emails
-    WHERE id = ${req.cookies.id}`
+    const sent = await sql.query(`SELECT * FROM emails
+    WHERE id = $1`,
+    [req.cookies.id]);
     
     if (Date.now() - sent.last_updated > 24*60*60*1000) {
       // if before 24 hours
@@ -104,6 +104,7 @@ async function updateEmail(req) {
     return false;
   }
 }
+
 module.exports = {
   getUsers,
   getUser,

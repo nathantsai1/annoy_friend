@@ -3,7 +3,7 @@ const path = require('path');
 
 const templates = path.join(__dirname + "./../../templates/");
 
-async function changeLogin(filePath, req, res, entries) {
+async function renderTemplate(filePath, req, res, entries) {
   try {
     const data = await fs.readFile(path.join(templates, filePath), "utf8");
     let result;
@@ -31,14 +31,4 @@ async function changeLogin(filePath, req, res, entries) {
 
 }
 
-// used to delete useless html bloat that were a part of creating TOS page
-async function writeFile(filePath, data) {
-  try {
-    await fs.writeFile(filePath, data, "utf8");
-    return true;
-  } catch (error) {
-    console.error("Error writing file: ", filePath, error);
-    return false; // Re-throw the error for further handling
-  }
-}
-module.exports = { changeLogin, writeFile }
+module.exports = { renderTemplate }

@@ -1,6 +1,6 @@
 const cookieParser = require("cookie-parser");
 
-async function store_cookie(entries, time, req, res) {
+async function storeCookie(entries, time, req, res) {
     entries.time = time + Date.now();
     // Set new cookies
     try {
@@ -12,9 +12,9 @@ async function store_cookie(entries, time, req, res) {
             }
             
             res.cookie(key, value, {
-                maxAge: time, 
-                httpOnly: true, 
-                secure: process.env.NODE_ENV === "production", 
+                maxAge: time,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
                 sameSite: "Strict"
             });
             cookieKeys.push(key);
@@ -27,5 +27,5 @@ async function store_cookie(entries, time, req, res) {
 }
 
 module.exports = {
-    store_cookie
+    storeCookie
 };

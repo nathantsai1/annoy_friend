@@ -3,6 +3,8 @@
 const path = require("path");
 const {google} = require("googleapis");
 const fs = require("fs/promises");
+const crypto = require('crypto');
+
 require("dotenv").config();
 
 // todo: uncomment
@@ -10,23 +12,26 @@ const main_url = process.env.MAIN_URL;
 const gmail = google.gmail("v1");
 
 const KEYFILE = path.join(__dirname, "../../oauth2.keys.json");
-const SCOPES = ["https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"];
+const SCOPES = [
+  "https://www.googleapis.com/auth/gmail.send", 
+  "https://www.googleapis.com/auth/userinfo.profile", 
+  "https://www.googleapis.com/auth/userinfo.email"
+];
 
-let oAuth2Client = null;
+const redirectUri = main_url + "oauth2callback/" + "login";
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  redirectUri,
+); // set up google client
 
 // generate redirect url from path("login", "signup")
-async function send_oauth2(path) {
+async function sendOauth2(path, state) {
   try {
-    const redirectUri = main_url + "oauth2callback/" + path;
-    oAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri
-    );
-
     const url = await oAuth2Client.generateAuthUrl({
       access_type: "offline",
       scope: SCOPES,
+      state: state
     });
 
     return url;
@@ -36,19 +41,16 @@ async function send_oauth2(path) {
   }
 }
 
-async function takeToken(code) {
+// exchange code for token
+async function takeToken(code, state, cookie_state) {
   try {    
     // Ensure oAuth2Client is initialized
-    if (!oAuth2Client) {
-      const keys = JSON.parse(await fs.readFile(KEYFILE, "utf8")).web;
-      oAuth2Client = new google.auth.OAuth2(
-        keys.client_id,
-        keys.client_secret,
-        keys.redirect_uris[0] // Use first redirect URI as default
-      );
+    if (!state || state != cookie_state) {
+      console.log(state, cookie_state);
+      throw new Error("State mismatch. Possible CSRF attack");
     }
     
-    const {tokens} = await oAuth2Client.getToken(code);
+    const {tokens} = await oAuth2Client.getToken(code); // take token
     oAuth2Client.setCredentials(tokens);
     google.options({auth: oAuth2Client});
     return tokens;
@@ -57,29 +59,15 @@ async function takeToken(code) {
     return false;
   }
 }
-async function send_email(req) {
+
+async function sendEmail(req) {
   try {
-    if (!req.cookies.oauth) {
-      console.error("OAuth token is required to send email");
-      return false;
-    }
-
-    if (!oAuth2Client) {
-      const keys = JSON.parse(await fs.readFile(KEYFILE, "utf8")).web;
-      oAuth2Client = new google.auth.OAuth2(
-        keys.client_id,
-        keys.client_secret,
-        keys.redirect_uris[0] // Use first redirect URI or pass index as parameter
-      );
-    }
-    // !req.query.email || !req.query.cc || !req.query.bcc || !req.query.recipient || !req.query.content
     oAuth2Client.setCredentials({access_token: req.cookies.oauth});
-        google.options({auth: oAuth2Client});
-
-          oAuth2Client.setCredentials({access_token: req.cookies.oauth});
     google.options({auth: oAuth2Client});
 
-    const emailLines = [
+    if (!req.query.email || !req.query.content || !req.query.recipient) throw new Error("Missing parameters");
+
+    const emailLines = [ // create email
      `From: ${req.cookies.name} <${req.cookies.email}>`,
      `To: ${req.query.email}`,
       req.query.cc ? `Cc: ${req.query.cc}` : null,
@@ -96,16 +84,17 @@ async function send_email(req) {
       .replace(/\//g, "_")
       .replace(/=+$/, "");
       
-    const res = await gmail.users.messages.send({
+    await gmail.users.messages.send({ // send message. throws err if err
       userId: "me",
       requestBody: {
         raw: raw,
       },
     });
     return true;
+    
   } catch (error) {
     console.error("Error sending email: ", error);
     return false;
   }
 }
-module.exports =  { takeToken, send_oauth2, send_email };
+module.exports =  { takeToken, sendOauth2, sendEmail };
