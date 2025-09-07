@@ -32,7 +32,7 @@ const slackApp = new App({
 });
 
 const app = receiver.app;
-const PORT = 8081;
+const PORT = process.env.PORT;
 
 // what do these paths mean?
 const templates = path.join(__dirname + "/../templates/");
@@ -502,6 +502,6 @@ app.get("/:error_page", async (req, res) => {
 });
 
 (async () => {
-    await slackApp.start(process.env.PORT || PORT);
+    await slackApp.start(PORT || PORT);
     console.log(`Server running at http://localhost:${PORT}/`);
 })();
