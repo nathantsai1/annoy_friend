@@ -43,7 +43,6 @@ async function createUser(userData) {
       VALUES ($1, 0, $2) 
     `, [userId, Date.now()]);
 
-    console.log("User created successfully:", await userId);
     return userId;
   } catch (e) {
     console.error("Error creating user:", e);

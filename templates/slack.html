@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annoy-Friend | Slack Messages</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="success-banner" class="success-banner">
+        <span id="banner-message">Login successful! Welcome back.</span>
+        <button class="close-btn" onclick="closeBanner()">&times;</button>
+    </div>
+    <header>
+        <a href="/"><h1>Annoy-Friend</h1></a>
+        <p>Send playful Slack messages to annoy your coworkers!</p>
+    </header>
+    <nav>
+        <a href="/about">About</a>
+        <a href="/my-emails">Email Mode</a>
+        {{login}}
+    </nav>
+    <main>
+        <h2>Hi, {{name}}! Welcome to Slack Annoyance Mode!</h2>
+        <p>
+            Time to playfully <strike>annoy</strike> brighten your coworkers' day! 💬
+        </p>        
+        <h2>How does it work?</h2>
+        <ol>
+            <li><strong>Connect your Slack workspace</strong> so the app can send messages on your behalf.</li>
+            <li><strong>Send up to 15 messages daily</strong> using AI-assisted writing* or manual composition.</li>
+            <li><strong>Choose channels or DMs</strong> to target your favorite colleagues!</li>
+            <li>Watch the chaos unfold in your workspace!</li>
+        </ol>
+        *Note: AI-assisted writing uses advanced prompts to create perfectly annoying yet workplace-appropriate messages.
+        
+        <div class="slack-status">
+            <h3>🔗 Slack Connection Status</h3>
+            <p id="connection-status">Not connected</p>
+            <button id="connect-slack" class="btn-primary">Connect to Slack</button>
+        </div>
+
+        <div id="input" style="display: none;">
+            <h3>Choose your annoyance method:</h3>
+            <button onclick="chooseAutomated(true)" class="btn-slack-ai">🤖 Use AI (Recommended)</button>
+            <button onclick="chooseAutomated(false)" class="btn-slack-manual">✍️ Manual Message</button>
+        </div>
+        
+        <div class="cta">
+            <a href="/about">Learn More</a>
+            <a href="/slack/help">Slack Integration Help</a>
+        </div>
+    </main>
+    {{footer}}
+    <script>        
+        async function chooseAutomated(isAutomated) {
+            if (isAutomated) {
+                const replacement = `<div class="slack-composer">
+                    <div class="slack-header">
+                        <h3>🤖 AI Slack Composer</h3>
+                        <p>Let AI craft the perfect workplace-appropriate annoyance</p>
+                    </div>
+                    <form action="/send_slack?ai=true" method="get" class="slack-form">
+                        <div class="slack-field-group">
+                            <div class="slack-field">
+                                <label class="slack-label">Target Type:</label>
+                                <select name="targetType" class="slack-select" required onchange="toggleTargetField(this.value)">
+                                    <option value="">Choose target...</option>
+                                    <option value="channel">📢 Channel</option>
+                                    <option value="dm">💬 Direct Message</option>
+                                    <option value="group">👥 Group Chat</option>
+                                </select>
+                            </div>
+                            <div class="slack-field">
+                                <label class="slack-label" id="target-label">Target:</label>
+                                <input type="text" name="target" class="slack-input" id="target-input" placeholder="Select target type first" required disabled>
+                            </div>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Recipient Name:</label>
+                            <input type="text" name="recipient" class="slack-input" placeholder="Their display name (for personalization)" required>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Message Theme:</label>
+                            <select name="theme" class="slack-select" required>
+                                <option value="">Choose theme...</option>
+                                <option value="meeting-reminder">📅 Fake Meeting Reminder</option>
+                                <option value="urgent-nothing">🚨 Urgent About Nothing</option>
+                                <option value="random-facts">🤓 Random Useless Facts</option>
+                                <option value="motivational-cringe">💪 Cringe Motivational</option>
+                                <option value="food-opinions">🍕 Strong Food Opinions</option>
+                                <option value="weekend-plans">🎉 Oversharing Weekend Plans</option>
+                            </select>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">AI Prompt:</label>
+                            <textarea name="content" class="slack-textarea" placeholder="Describe the vibe you want... (e.g., 'Make it sound super enthusiastic about something mundane')" rows="4"></textarea>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Annoyance Level:</label>
+                            <select name="annoyanceLevel" class="slack-select" required>
+                                <option value="mild">😊 Mild (Slightly quirky)</option>
+                                <option value="medium">😏 Medium (Noticeably odd)</option>
+                                <option value="spicy">🌶️ Spicy (Maximally annoying)</option>
+                            </select>
+                        </div>
+                        <div class="slack-actions">
+                            <button type="button" onclick="chooseAutomated(null)" class="btn-secondary">← Back</button>
+                            <button type="submit" class="btn-slack">🚀 Send Slack Message</button>
+                        </div>
+                        <input name="ai" type="hidden" value="true">
+                    </form>
+                </div>`;
+                const basicForm = document.getElementById('input');
+                basicForm.style.display = 'none';
+                basicForm.insertAdjacentHTML('afterend', replacement);
+            } else if (isAutomated === false) {
+                const replacement = `<div class="slack-composer">
+                    <div class="slack-header">
+                        <h3>✍️ Manual Slack Message</h3>
+                        <p>Craft your own workplace chaos</p>
+                    </div>
+                    <form action="/send_slack?ai=false" method="get" class="slack-form">
+                        <div class="slack-field-group">
+                            <div class="slack-field">
+                                <label class="slack-label">Target Type:</label>
+                                <select name="targetType" class="slack-select" required onchange="toggleTargetField(this.value)">
+                                    <option value="">Choose target...</option>
+                                    <option value="channel">📢 Channel</option>
+                                    <option value="dm">💬 Direct Message</option>
+                                    <option value="group">👥 Group Chat</option>
+                                </select>
+                            </div>
+                            <div class="slack-field">
+                                <label class="slack-label" id="target-label">Target:</label>
+                                <input type="text" name="target" class="slack-input" id="target-input" placeholder="Select target type first" required disabled>
+                            </div>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Recipient Name:</label>
+                            <input type="text" name="recipient" class="slack-input" placeholder="Their display name" required>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Your Message:</label>
+                            <textarea name="content" class="slack-textarea" placeholder="Type your annoying message here... Remember to keep it workplace appropriate! 😈" rows="8"></textarea>
+                        </div>
+                        <div class="slack-field">
+                            <label class="slack-label">Add Reactions?</label>
+                            <input type="text" name="reactions" class="slack-input" placeholder="👀,🤔,😅 (comma separated emojis)">
+                        </div>
+                        <div class="slack-actions">
+                            <button type="button" onclick="chooseAutomated(null)" class="btn-secondary">← Back</button>
+                            <button type="submit" class="btn-slack">📨 Send Message</button>
+                        </div>
+                        <input name="ai" type="hidden" value="false">
+                    </form>
+                </div>`;
+                const basicForm = document.getElementById('input');
+                basicForm.style.display = 'none';
+                basicForm.insertAdjacentHTML('afterend', replacement);
+            } else if (isAutomated === null) {
+                // Go back to the original selection
+                const composer = document.querySelector('.slack-composer');
+                if (composer) {
+                    composer.remove();
+                }
+                document.getElementById('input').style.display = 'block';
+            }
+        }
+
+        function toggleTargetField(targetType) {
+            const targetInput = document.getElementById('target-input');
+            const targetLabel = document.getElementById('target-label');
+            
+            if (targetType === 'channel') {
+                targetInput.placeholder = '#general, #random, etc.';
+                targetLabel.textContent = 'Channel Name:';
+                targetInput.disabled = false;
+            } else if (targetType === 'dm') {
+                targetInput.placeholder = '@username or display name';
+                targetLabel.textContent = 'User:';
+                targetInput.disabled = false;
+            } else if (targetType === 'group') {
+                targetInput.placeholder = 'Group chat name or members';
+                targetLabel.textContent = 'Group:';
+                targetInput.disabled = false;
+            } else {
+                targetInput.placeholder = 'Select target type first';
+                targetLabel.textContent = 'Target:';
+                targetInput.disabled = true;
+            }
+        }
+
+        // Check Slack connection status
+        async function checkSlackConnection() {
+            try {
+                const response = await fetch('/slack/status');
+                const data = await response.json();
+                
+                const statusEl = document.getElementById('connection-status');
+                const connectBtn = document.getElementById('connect-slack');
+                const inputDiv = document.getElementById('input');
+                
+                if (data.connected) {
+                    statusEl.textContent = `✅ Connected to ${data.workspace}`;
+                    statusEl.style.color = '#28a745';
+                    connectBtn.style.display = 'none';
+                    inputDiv.style.display = 'block';
+                } else {
+                    statusEl.textContent = '❌ Not connected to Slack';
+                    statusEl.style.color = '#dc3545';
+                    connectBtn.style.display = 'block';
+                    inputDiv.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking Slack connection:', error);
+            }
+        }
+
+        // Connect to Slack
+        document.getElementById('connect-slack').addEventListener('click', () => {
+            window.location.href = '/auth/slack';
+        });
+
+        // Banner functionality
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            showBanner('Slack message sent! Your coworker will be confused soon. 😈', true);
+        } else if (urlParams.get('success') === 'false') {
+            showBanner('Message failed to send! Try again or check your Slack connection.', false);
+        } else if (urlParams.get('connected') === 'true') {
+            showBanner('Successfully connected to Slack! You can now send messages.', true);
+        }
+
+        function createConfetti() {
+            const confettiContainer = document.createElement('div');
+            confettiContainer.className = 'confetti';
+            document.body.appendChild(confettiContainer);
+
+            // Create Slack-themed confetti (using Slack colors)
+            for (let i = 0; i < 50; i++) {
+                const confettiPiece = document.createElement('div');
+                confettiPiece.className = 'confetti-piece slack-confetti';
+                
+                // Slack brand colors
+                const colors = ['#4a154b', '#36c5f0', '#2eb67d', '#ecb22e', '#e01e5a'];
+                confettiPiece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                confettiPiece.style.left = Math.random() * 100 + '%';
+                confettiPiece.style.animationDelay = Math.random() * 2 + 's';
+                
+                confettiContainer.appendChild(confettiPiece);
+            }
+
+            setTimeout(() => {
+                if (confettiContainer.parentNode) {
+                    confettiContainer.parentNode.removeChild(confettiContainer);
+                }
+            }, 6000);
+        }
+
+        function showBanner(message, is_true) {
+            const banner = document.getElementById('success-banner');
+            const messageEl = document.getElementById('banner-message');
+            messageEl.textContent = message;
+            banner.classList.add('show');
+            if (!is_true) banner.style.backgroundColor = '#ff0033';
+            document.body.classList.add('banner-shown');
+            
+            if (is_true) createConfetti();
+            
+            setTimeout(() => {
+                closeBanner();
+            }, 5000);
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('success-banner');
+            banner.classList.remove('show');
+            document.body.classList.remove('banner-shown');
+            
+            const url = new URL(window.location);
+            ['success', 'connected'].forEach(param => url.searchParams.delete(param));
+            window.history.replaceState({}, document.title, url);
+        }
+
+        // Initialize page
+        checkSlackConnection();
+    </script>
+
+    <style>
+        .slack-composer {
+            background: #f8f9fa;
+            border: 2px solid #4a154b;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .slack-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .slack-header h3 {
+            color: #4a154b;
+            margin-bottom: 0.5rem;
+        }
+
+        .slack-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .slack-field-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .slack-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slack-label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #4a154b;
+        }
+
+        .slack-input, .slack-select, .slack-textarea {
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .slack-input:focus, .slack-select:focus, .slack-textarea:focus {
+            outline: none;
+            border-color: #36c5f0;
+        }
+
+        .slack-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+        }
+
+        .btn-slack, .btn-slack-ai, .btn-slack-manual {
+            background: linear-gradient(45deg, #4a154b, #36c5f0);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-slack:hover, .btn-slack-ai:hover, .btn-slack-manual:hover {
+            transform: translateY(-2px);
+        }
+
+        .slack-status {
+            background: #f0f0f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .slack-confetti {
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .slack-field-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .slack-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>

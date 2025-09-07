@@ -5,13 +5,14 @@ const {google} = require("googleapis");
 const fs = require("fs/promises");
 const crypto = require('crypto');
 
+const {validEmailQuery} = require('./check');
+
 require("dotenv").config();
 
 // todo: uncomment
 const main_url = process.env.MAIN_URL;
 const gmail = google.gmail("v1");
 
-const KEYFILE = path.join(__dirname, "../../oauth2.keys.json");
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.send", 
   "https://www.googleapis.com/auth/userinfo.profile", 
@@ -26,7 +27,7 @@ const oAuth2Client = new google.auth.OAuth2(
 ); // set up google client
 
 // generate redirect url from path("login", "signup")
-async function sendOauth2(path, state) {
+async function sendOauth2(state) {
   try {
     const url = await oAuth2Client.generateAuthUrl({
       access_type: "offline",
@@ -46,7 +47,6 @@ async function takeToken(code, state, cookie_state) {
   try {    
     // Ensure oAuth2Client is initialized
     if (!state || state != cookie_state) {
-      console.log(state, cookie_state);
       throw new Error("State mismatch. Possible CSRF attack");
     }
     
@@ -65,8 +65,6 @@ async function sendEmail(req) {
     oAuth2Client.setCredentials({access_token: req.cookies.oauth});
     google.options({auth: oAuth2Client});
 
-    if (!req.query.email || !req.query.content || !req.query.recipient) throw new Error("Missing parameters");
-
     const emailLines = [ // create email
      `From: ${req.cookies.name} <${req.cookies.email}>`,
      `To: ${req.query.email}`,
@@ -82,7 +80,7 @@ async function sendEmail(req) {
     const raw = Buffer.from(emailLines.join("\r\n")).toString("base64")
       .replace(/\+/g, "-")
       .replace(/\//g, "_")
-      .replace(/=+$/, "");
+      .replace(/=+$/, ""); // url encode
       
     await gmail.users.messages.send({ // send message. throws err if err
       userId: "me",
@@ -91,9 +89,9 @@ async function sendEmail(req) {
       },
     });
     return true;
-    
+
   } catch (error) {
-    console.error("Error sending email: ", error);
+    console.error("Err /src/common/google sendEmail(): ", error);
     return false;
   }
 }
