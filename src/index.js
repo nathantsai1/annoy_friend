@@ -1,3 +1,4 @@
+
 // links: /, /about, /signup, /login, /my-emails
 // more: /tos, /privacy, /logout
 // even more: /oauth2callback/login, /oauth2callback/signup
@@ -21,6 +22,8 @@ const { requireNoAuth, requireAuth, is_loggedin } = require("./common/is_loggedi
 const { getUsers, getUser, createUser, updateUser, getEmailsSent, updateEmail } = require("./common/neon");
 const { gemini } = require("./common/gemini");
 const { validEmailQuery } = require("./common/check");
+const { sendSlackMessage } = require("./common/slack");
+
 
 // express from slack
 const receiver = new ExpressReceiver({
@@ -54,33 +57,24 @@ app.get("/favicon.ico", (req, res) => {
 });
 
 app.get("/", async (req, res) => {
-    if (req.query && req.query.login) {
-        // if logged in change navbar
-        renderTemplate("main.html", req, res)
-     } else {
-        // if not logged in no change navbar
-        renderTemplate("main.html", req, res, {
-            login: `${req.query.login}`, 
-            signup: `${req.query.signup}`
-        });
-     }
-    return true;
+    renderTemplate("main.html", req, res, req.query.login ? {} : {
+        login: `${req.query.login}`, 
+        signup: `${req.query.signup}`
+    });
 });
 
 app.get("/logout", async (req, res) => {
     // clear cookies
     Object.keys(req.cookies).forEach(key => res.clearCookie(key));
     res.redirect("/?logout=true"); // Redirect to login page after logout
-    return true;
 });
 
 app.get("/oauth2callback/:request", requireNoAuth, async (req, res) => {
-    const code = req.query.code;
-    const state = req.query.state;
+    const { code, state } = req.query;
 
     try {
-        if ((req.params.request != "login" && req.params.request != "signup") || !code) {
-            throw new Error("Not valid url")
+        if (!["login", "signup"].includes(req.params.request) || !code) {
+            throw new Error("Not valid url");
         }
 
         // exchange google toekn for authentication
@@ -100,57 +94,42 @@ app.get("/oauth2callback/:request", requireNoAuth, async (req, res) => {
         // parse info
         const userInfo = await response.json();
         const isUser = await getUser(userInfo.email); // neon db
-        let cookie = {
+        const cookie = {
             oauth: result.access_token,
             scopes: result.scope,
             name: userInfo.name,
             email: userInfo.email,
             state: state,
             type: "google"
-        }
+        };
 
-        if (isUser.length == 0) {
-            // user email not found. sign up
-            const user = await createUser(cookie);
-            cookie.id = user;
-            storeCookie(cookie, result.expiry_date - Date.now(), res);
-            res.redirect("/?signup=true"); // Redirect with query parameter
-        } else {
-            // log in
-            cookie.id = isUser[0].id;
-            storeCookie(cookie, result.expiry_date - Date.now(), res);
-            res.redirect("/?login=true")
-            return true;
-        }
+        const isNewUser = isUser.length === 0;
+        cookie.id = isNewUser ? await createUser(cookie) : isUser[0].id;
+        
+        storeCookie(cookie, result.expiry_date - Date.now(), res);
+        res.redirect(`/?${isNewUser ? 'signup' : 'login'}=true`);
 
     } catch(e) {
         console.error(`Error in /oauth2callback/${req.params.request} route:`, e);
         res.status(500).send("Server Error");
-        return false;
     }
-
 });
 
 app.get("/settings", requireAuth, async (req, res) => {
-    try{
-        const emailsSent = await getEmailsSent(req.cookies.id)
+    try {
+        const emailsSent = await getEmailsSent(req.cookies.id);
         
-        // get ready to add information
-        const entries = {
+        // add information
+        renderTemplate("settings.html", req, res, {
             name: req.cookies.name,
             title: "Settings",
             num_emails: emailsSent[0].emails_sent,
             email: req.cookies.email,
             date: new Date(Number(emailsSent[0].last_updated))
-        };
-
-        // add information
-        renderTemplate("settings.html", req, res, entries);
-        return true;
+        });
     } catch (e) {
         console.error(e);
         res.redirect("/505");
-        return false;
     }
 });
 
@@ -158,51 +137,48 @@ app.get("/send_email", requireAuth, async (req, res) => {
     // check for required 
     try {
         if (!validEmailQuery(req.query)) {
-            res.status(400).send("Bad Request: Missing required query parameters");
-            return false;
+            return res.status(400).send("Bad Request: Missing required query parameters");
         }
 
+        let emailReq = req;
+        
         // if user wants ai
-        if (req.query.ai && req.query.ai == "true") {
+        if (req.query.ai === "true") {
             // get prompt
             const prompt = req.query.prompt;
-            if (!prompt || prompt.trim() === '') throw new Error("bad prompt");
+            if (!prompt?.trim()) throw new Error("bad prompt");
 
             // create modified req to change req.query.content w/gemini
-            let modifiedQuery = { 
+            emailReq = { 
                 cookies: req.cookies,
                 query: {
-                    email: req.query.email,
-                    cc: req.query.cc,
-                    bcc: req.query.bcc,
-                    subject: req.query.subject,
+                    ...req.query,
                     content: await gemini(prompt)
                 }
             };
-            // send email
-            res.redirect(`/my-emails?success=${ await sendEmail(modifiedQuery)}`);
         }
-        else res.redirect(`/my-emails?success=${await sendEmail(req)}`);
+        
+        // send email
+        const success = await sendEmail(emailReq);
+        res.redirect(`/my-emails?success=${success}`);
         updateEmail(req);
     } catch (e) {
         console.log("/send_email err: ", e);
         res.redirect("/505");
     }
-    return true;
 });
 
 
 app.get("/test", async (req, res) => {
     // 505 err, not really needed
-    res.send(req.cookies)
-    return true;
+    res.send(req.cookies);
 });
 
 app.post("/update_info", requireAuth, async (req, res) => {    
     // update info from /settings(literally just name)
-    if (!req.body || !req.body.name) {
+    if (!req.body?.name) {
         res.redirect("/505");
-        return truel
+        return;
     }
 
     // change name in: 
@@ -222,22 +198,7 @@ app.post("/update_info", requireAuth, async (req, res) => {
 
 
 
-app.get("/auth/slack", async ( req, res ) => {
-    const body = req.query; // get query
-    const code = body.code; // get oauth code
-
-    const result = await fetch("https://slack.com/api/oauth.v2.access", {
-        method: "POST",
-        body: JSON.stringify({ 
-            client_secret: process.env.SLACK_CLIENT_SECRET,
-            client_id: process.env.SLACK_CLIENT_ID,
-            code: code
-        }),
-    });
-
-    res.send(result)
-
-})
+// Remove duplicate/broken auth/slack route - using the correct one below
 
 slackApp.command("/test-radio", async ({ command, ack, respond }) => {
       try {
@@ -276,24 +237,28 @@ slackApp.command("/test-radio", async ({ command, ack, respond }) => {
 });
 
 app.get("/slack/test", async (req, res) => {
-    const result = await fetch("https://slack.com/api/" + "users.profile.get", {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-            "Authorization": "Bearer " + process.env.SLACK_USER_TOKEN,
-        }
-    });
+    try {
+        const result = await fetch("https://slack.com/api/users.profile.get", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": "Bearer " + process.env.SLACK_USER_TOKEN,
+            }
+        });
 
-    const data = await result.json();
+        const data = await result.json();
 
-    if (!data.ok) {
-        console.log(data);
-        res.redirect("/500");
-        return true;
-    } 
+        if (!data.ok) {
+            console.log(data);
+            return res.redirect("/500");
+        } 
 
-    return data;
-})
+        res.json(data);
+    } catch (error) {
+        console.error('Slack test error:', error);
+        res.status(500).json({ error: 'Failed to test Slack API' });
+    }
+});
 
 app.get("/slack/status", requireAuth, async (req, res) => {
     try {
@@ -429,14 +394,43 @@ app.get("/auth/slack/callback", requireAuth, async (req, res) => {
 
 // Serve Slack page
 app.get("/slack", requireAuth, async (req, res) => {
+    renderTemplate("slack.html", req, res, {
+        title: "Slack Messages",
+        name: req.cookies.name || "User"
+    });
+});
+
+// Efficient Slack message sending route (manual & AI)
+app.get("/send_slack", requireAuth, async (req, res) => {
     try {
-        await renderTemplate("slack.html", req, res, {
-            title: "Slack Messages",
-            name: req.cookies.name || "User"
+        const slackToken = req.cookies.slack_access_token;
+        if (!slackToken) {
+            return res.redirect("/slack?error=not_connected");
+        }
+
+        // Get channel or user (target) and message content
+        const { target, content, ai, reactions } = req.query;
+        let text = content;
+
+        // If AI, generate message content
+        if (ai === "true" && req.query.prompt) {
+            text = await gemini(req.query.prompt);
+        }
+
+        // Parse reactions if provided
+        const reactionList = reactions ? reactions.split(",").map(r => r.trim()).filter(Boolean) : [];
+
+        const success = await sendSlackMessage({
+            token: slackToken,
+            channel: target,
+            text,
+            reactions: reactionList
         });
-    } catch (error) {
-        console.error('Error serving slack page:', error);
-        res.status(500).send('Server Error');
+
+        res.redirect(`/slack?success=${success}`);
+    } catch (e) {
+        console.error("/send_slack err: ", e);
+        res.redirect("/slack?success=false");
     }
 });
 
@@ -451,10 +445,11 @@ app.get("/slack", requireAuth, async (req, res) => {
 
 // don't touch
 app.get("/:error_page", async (req, res) => {
-    let path = req.params.error_page
-    breakme: if (path == "login" || path == "signup") {
+    const path = req.params.error_page;
+    
+    if (["login", "signup"].includes(path)) {
         // login or sign up
-        if (await is_loggedin(false, req, res, {url: main_page + req.path})) break breakme;
+        if (await is_loggedin(false, req, res, {url: main_page + req.path})) return;
         
         // Clear old state cookie and set new one
         const state = crypto.randomBytes(32).toString('hex'); // prevent CSRF attacks
@@ -462,43 +457,39 @@ app.get("/:error_page", async (req, res) => {
         storeCookie({state: state}, 1000 * 60 * 30, res, "Lax");
 
         const link = await sendOauth2(state);
-        if (link == false) {
+        if (link === false) {
             console.error("Error reading login.html");
-            res.redirect("/505");
+            return res.redirect("/505");
         }
+        
         renderTemplate(path + ".html", req, res, {
-            title: String(path).charAt(0).toUpperCase() + String(path).slice(1), 
+            title: path.charAt(0).toUpperCase() + path.slice(1), 
             oauth: link
         });
-        return true;
-
     } else {
-        let possible_paths = [
+        const possible_paths = [
             {name: "my-emails", need_oauth: true, type: "google"},
-            { name: "tos", need_oauth: null},
-            { name: "privacy", need_oauth: null},
-            { name: "about", need_oauth: null},
-            { name: "505", need_oauth: null}
+            {name: "tos", need_oauth: null},
+            {name: "privacy", need_oauth: null},
+            {name: "about", need_oauth: null},
+            {name: "505", need_oauth: null}
         ];
+        
         // loop through paths to see if any are viable options
-        let path_part;
-        let validOauth;
-        for (let i in possible_paths) {
-            path_part = possible_paths[i];
-            if (path_part.name.toLowerCase() == path) {
-                // if path matches path name, check login reqs.
-                validOauth = ((path_part.need_oauth == null) || // if path doesnt need oauth or is part of same type of oauth(google/slack) w/oauth 
-                            (path_part.type == req.cookies.type && (Boolean(req.cookies.oauth) == path_part.need_oauth)))
-                if (validOauth) {
-                    renderTemplate(possible_paths[i].name.toLowerCase() + ".html", req, res, {name: req.cookies.name});
-                    return true; // redirected succcessfully
-                } 
+        const pathMatch = possible_paths.find(p => p.name.toLowerCase() === path);
+        
+        if (pathMatch) {
+            const validOauth = pathMatch.need_oauth === null || 
+                              (pathMatch.type === req.cookies.type && Boolean(req.cookies.oauth) === pathMatch.need_oauth);
+            
+            if (validOauth) {
+                return renderTemplate(pathMatch.name.toLowerCase() + ".html", req, res, {name: req.cookies.name});
             }
         }
+        
+        // else Handle 404 errors
+        renderTemplate("404.html", req, res, {url: `${main_page + req.originalUrl}`});
     }
-    // else Handle 404 errors
-    renderTemplate("404.html", req, res, {url: `${main_page + req.originalUrl}`});
-    return true;
 });
 
 (async () => {

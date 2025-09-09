@@ -1,23 +1,45 @@
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
 
+// Send a Slack message (manual or AI)
+async function sendSlackMessage({ token, channel, text, reactions }) {
+    try {
+        // Send the message
+        const response = await fetch('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                channel,
+                text
+            })
+        });
+        const data = await response.json();
+        if (!data.ok) throw new Error(data.error);
 
-// call slack function. takes method(str), request_type(str), body if necessary
-async function call_slack(method, )
-const result = await fetch("https://slack.com/api/" + "users.profile.get", {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-            "Authorization": "Bearer " + process.env.SLACK_USER_TOKEN,
+        // Optionally add reactions
+        if (reactions && reactions.length > 0) {
+            for (const reaction of reactions) {
+                await fetch('https://slack.com/api/reactions.add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        channel,
+                        name: reaction,
+                        timestamp: data.ts
+                    })
+                });
+            }
         }
-    });
-
-    const data = await result.json();
-
-    if (!data.ok) {
-        console.log(data);
-        res.redirect("/500");
         return true;
-    } 
+    } catch (e) {
+        console.error('Error sending Slack message:', e);
+        return false;
+    }
+}
 
-    return data;
-fasdf
+module.exports = { sendSlackMessage };
