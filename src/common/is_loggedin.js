@@ -22,7 +22,7 @@ async function is_loggedin(bool, req, res, entries = {}) {
     // }
     const is_token = (req.cookies && req.cookies.oauth) ? true : false;
     if (bool == false && is_token==true) return change(req, res, entries);
-    else if (bool == true && is_token==false) return change(req, res, entries)
+    else if (bool == true && is_token==false) return change(req, res, entries);
     return false; // to return back to server as false
   } catch(e) {
     console.log(e);

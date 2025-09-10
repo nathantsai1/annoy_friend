@@ -335,21 +335,21 @@ app.get("/auth/slack", requireAuth, async (req, res) => {
 
 app.get("/auth/slack/callback", requireAuth, async (req, res) => {
     try {
-        const { code, state, error } = req.query;
+        const { code, error } = req.query;
         
         if (error) {
             console.error('Slack OAuth error:', error);
             return res.redirect('/slack?error=access_denied');
         }
 
-        if (!code || !state) {
+        if (!code) {
             return res.redirect('/slack?error=missing_params');
         }
 
         // Verify state parameter
-        if (state !== req.cookies.slack_oauth_state) {
-            return res.redirect('/slack?error=state_mismatch');
-        }
+        // if (state !== req.cookies.slack_oauth_state) {
+        //     return res.redirect('/slack?error=state_mismatch');
+        // }
 
         // Exchange code for access token
         const tokenResponse = await fetch('https://slack.com/api/oauth.v2.access', {
